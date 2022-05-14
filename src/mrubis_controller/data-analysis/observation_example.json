@@ -1,0 +1,39 @@
+{
+  'mRUBiS #1': {
+    'shop_utility': '143133.31813907367', # moved, but only if not to much work
+    'system_utility': '2062425.0165422875', # moved, but only if not to much work
+    "components": {
+      'Past Sales Item Filter': {
+        'failure_name': 'None', # added
+        'component_utility': '3902.066287462651',
+        'request': '392.0',
+        'replica': '13.0',
+        'perf_max': '5.822437568109859',
+        'importance': '12.0',
+        'reliability': '0.5',
+        'criticality': '28.0',
+        'sat_point': '0.030815006942085173',
+        'adt': '1.0611758307173695',
+        'connectivity': '2.0',
+        'provided_interface': '1', # removed
+        'uid': '_b_K1WuSREeumKfox9_84gw', # removed
+        'required_interface': '1' # removed
+      },
+      'Inventory Service': {
+        'failure_name': 'CF3', # indicates failing component
+        'rule_costs': '[1.66, 1.66]', # remove
+        'rule_names': '[HwRedeployComponent, ReplaceComponent]', # remove
+        'component_utility': '9.094947017729282E-13',
+        'request': '383.0',
+        'replica': '23.0',
+        'perf_max': '11.117148154126088',
+        'importance': '12.0',
+        'reliability': '0.5',
+        'criticality': '13.0',
+        'sat_point': '0.0580544066513318',
+        'adt': '1.3988956865683932',
+        'connectivity': '3.0'
+      }
+    }
+  }
+}

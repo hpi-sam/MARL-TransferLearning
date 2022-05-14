@@ -1,0 +1,50 @@
+{ # only attributes that are updated will be send
+  # reward will be the utility -> fix successful: utitlity increases <> fix not successful: utitlity drops
+  # inject new issues if shop has no other issues, but other shops can still have issues
+  'mRUBiS #2': {},
+  'mRUBiS #1': {
+    'Inventory Service': {
+      'failure_name': 'None',
+      'component_utility': '5188.836379265326',
+      'required_interface': '2',
+      'request': '383.0',
+      'rule_names': '',
+      'replica': '23.0',
+      'failure_name': '',
+      'perf_max': '11.117148154126088',
+      'importance': '12.0',
+      'reliability': '0.5',
+      'criticality': '13.0',
+      'sat_point': '0.0580544066513318',
+      'system_utility': '2159928.911293412',
+      'rule_costs': '',
+      'adt': '1.3988956865683932',
+      'shop_utility': '152498.66930177846',
+      'uid': '_cfTPAHLhEeyxbtIhUWQoEA',
+      'connectivity': '3.0',
+      'provided_interface': '1'
+    }
+  },
+  'mRUBiS #10': {
+    'Availability Item Filter': {
+      'component_utility': '16928.450842042195',
+      'required_interface': '1',
+      'request': '388.0',
+      'rule_names': '',
+      'replica': '22.0',
+      'failure_name': '',
+      'perf_max': '16.80505063754819',
+      'importance': '21.0',
+      'reliability': '0.5',
+      'criticality': '24.0',
+      'sat_point': '0.056489170309017234',
+      'system_utility': '2159928.911293412',
+      'rule_costs': '',
+      'adt': '1.1040200606380364',
+      'shop_utility': '259736.18715325295',
+      'uid': '_cfpNQHLhEeyxbtIhUWQoEA',
+      'connectivity': '2.0',
+      'provided_interface': '1'
+    }
+  }
+}
