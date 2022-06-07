@@ -1,8 +1,8 @@
 from numpy.testing import assert_array_equal
 from pathlib import Path
 
-from mrubis_controller.marl.mrubis_mock_env import MrubisMockEnv
-from mrubis_controller.marl.agent import Agent
+from marl.mrubis_mock_env import MrubisMockEnv
+from marl.agent import Agent
 
 
 def init_agent(shops=None):

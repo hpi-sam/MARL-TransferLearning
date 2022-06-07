@@ -1,11 +1,10 @@
 import os
 
-from mrubis_controller.marl.helper import build_reward_plot, build_count_plot, build_loss_plot, get_current_time
+from marl.helper import build_reward_plot, build_count_plot, build_loss_plot, get_current_time
 from multi_agent_controller import MultiAgentController
 
-# from mrubis_controller.marl.mrubis_mock_env import MrubisMockEnv
-from mrubis_controller.marl.mrubis_env import MrubisEnv
-
+# from marl.mrubis_mock_env import MrubisMockEnv
+from marl.mrubis_env import MrubisEnv
 
 class Runner:
     def __init__(self, args, env, shop_distribution, save_model=False, load_models_data=None,

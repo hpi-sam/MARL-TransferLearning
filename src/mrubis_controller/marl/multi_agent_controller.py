@@ -1,10 +1,10 @@
 from pathlib import Path
 
-from mrubis_controller.marl.agent import Agent
-from mrubis_controller.marl.random_agent import RandomAgent
-from mrubis_controller.marl.mrubis_data_helper import build_observations, build_rewards, build_actions
-from mrubis_controller.marl.rank_learner import RankLearner
-from mrubis_controller.marl.robustness_component import RobustnessComponent
+from marl.agent import Agent
+from marl.random_agent import RandomAgent
+from marl.mrubis_data_helper import build_observations, build_rewards, build_actions
+from marl.rank_learner import RankLearner
+from marl.robustness_component import RobustnessComponent
 
 
 class MultiAgentController:

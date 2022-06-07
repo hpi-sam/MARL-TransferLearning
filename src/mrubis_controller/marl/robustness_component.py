@@ -1,8 +1,8 @@
 import numpy as np
 
-from mrubis_controller.marl.agent import Agent
-from mrubis_controller.marl.mrubis_data_helper import build_replay_buffer
-from mrubis_controller.marl.mrubis_data_helper import has_shop_remaining_issues
+from marl.agent import Agent
+from marl.mrubis_data_helper import build_replay_buffer
+from marl.mrubis_data_helper import has_shop_remaining_issues
 
 
 class RobustnessComponent:

@@ -2,8 +2,8 @@ import copy
 
 import gym
 
-from mrubis_controller.marl.data.data_generator import DataGenerator
-from mrubis_controller.marl.mrubis_data_helper import get_failing_component, get_current_utility
+from marl.data.data_generator import DataGenerator
+from marl.mrubis_data_helper import get_failing_component, get_current_utility
 
 
 class MrubisMockEnv(gym.Env):

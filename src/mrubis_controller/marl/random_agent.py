@@ -1,5 +1,5 @@
 import numpy as np
-from mrubis_controller.marl.sorting.agent_action_sorter import AgentActionSorter
+from marl.sorting.agent_action_sorter import AgentActionSorter
 
 
 def _decoded_action(action, observation):

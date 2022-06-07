@@ -1,4 +1,4 @@
-from mrubis_controller.marl.agent import encode_observations
+from marl.agent import encode_observations
 
 
 def build_observations(agents, agent_index, observation, shops=None):

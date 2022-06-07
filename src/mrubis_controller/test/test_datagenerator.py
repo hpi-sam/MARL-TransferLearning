@@ -1,6 +1,6 @@
-from mrubis_controller.marl.agent import encode_observations
-from mrubis_controller.marl.data.data_generator import DataGenerator
-from mrubis_controller.marl.mrubis_mock_env import MrubisMockEnv
+from marl.agent import encode_observations
+from marl.data.data_generator import DataGenerator
+from marl.mrubis_mock_env import MrubisMockEnv
 import numpy as np
 
 

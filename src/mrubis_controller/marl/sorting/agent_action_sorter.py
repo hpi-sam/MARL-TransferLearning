@@ -1,4 +1,4 @@
-from mrubis_controller.jakobs_model.component_utility_predictor import RidgeUtilityPredictor
+from jakobs_model.component_utility_predictor import RidgeUtilityPredictor
 import pandas as pd
 
 

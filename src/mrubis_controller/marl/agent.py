@@ -7,8 +7,8 @@ from keras.layers import Dense, Input
 from keras.models import Model
 from keras.optimizers import Adam
 
-from mrubis_controller.marl.helper import get_current_time
-from mrubis_controller.marl.sorting.agent_action_sorter import AgentActionSorter
+from marl.helper import get_current_time
+from marl.sorting.agent_action_sorter import AgentActionSorter
 
 
 def _decoded_action(action, observation):

@@ -1,5 +1,5 @@
-from mrubis_controller.marl.mrubis_mock_env import MrubisMockEnv
-from mrubis_controller.marl.multi_agent_controller import MultiAgentController
+from marl.mrubis_mock_env import MrubisMockEnv
+from marl.multi_agent_controller import MultiAgentController
 
 
 def run_one_step(env, mac):

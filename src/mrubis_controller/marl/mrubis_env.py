@@ -5,8 +5,8 @@ import json
 from time import sleep
 from subprocess import PIPE, Popen
 
-from chunkedsocketcommunicator import ChunkedSocketCommunicator
-from mrubis_controller.marl.mrubis_data_helper import get_current_utility
+from marl.chunkedsocketcommunicator import ChunkedSocketCommunicator
+from marl.mrubis_data_helper import get_current_utility
 
 logging.basicConfig()
 logger = logging.getLogger('controller')

@@ -1,7 +1,7 @@
 import numpy as np
 
-from mrubis_controller.marl.agent import encode_observations
-from mrubis_controller.marl.mrubis_mock_env import MrubisMockEnv
+from marl.agent import encode_observations
+from marl.mrubis_mock_env import MrubisMockEnv
 
 
 def test_reset():
