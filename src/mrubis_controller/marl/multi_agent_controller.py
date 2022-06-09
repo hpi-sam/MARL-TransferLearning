@@ -1,7 +1,6 @@
 from pathlib import Path
 
 from marl.agent import Agent
-from marl.random_agent import RandomAgent
 from marl.mrubis_data_helper import build_observations, build_rewards, build_actions
 from marl.rank_learner import RankLearner
 from marl.robustness_component import RobustnessComponent
@@ -14,7 +13,7 @@ class MultiAgentController:
         self.load_models_data = load_models_data
         self.rank_learner = RankLearner(1, None)
         self.agents = None
-        self.ridge_regression_train_data_path = Path('./data/TrainingmRUBiS_Theta0.05_NonStationary.csv')
+        self.ridge_regression_train_data_path = Path('marl/data/TrainingmRUBiS_Theta0.05_NonStationary.csv')
         self.robustness = RobustnessComponent(len(self.shop_distribution))
         self.robustness_activated = robustness_activated
 
@@ -31,13 +30,19 @@ class MultiAgentController:
             self.robustness.plan(self.agents)
 
         actions = []
+        regrets = {}
+        root_causes = {}
         for index, agent in enumerate(self.agents):
             if self.robustness_activated and self.robustness.skip_agent(index):
                 continue
             challenged_shops = self.robustness.get_execution_plan(index) if self.robustness_activated else None
-            actions.append(agent.choose_action(build_observations(self.agents, index, observations, challenged_shops)))
-
-        return self.rank_learner.sort_actions(actions)
+            action, regret, root_cause = agent.choose_action(
+                build_observations(
+                    self.agents, index, observations, challenged_shops))
+            regrets[index] = regret
+            root_causes[index] = root_cause
+            actions.append(action)
+        return self.rank_learner.sort_actions(actions), regrets, root_causes
 
     def learn(self, observations, actions, rewards, observations_, dones):
         """ start learning for Agents and RankLearner """

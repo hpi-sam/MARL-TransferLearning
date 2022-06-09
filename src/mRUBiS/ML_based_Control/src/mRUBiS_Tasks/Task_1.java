@@ -102,6 +102,8 @@ public class Task_1 {
 	private static List<String> injectionComponentNames = null;
 	private static int traceLength = 0;
 	
+	private static boolean sendrootIssue = false;
+	
 
 	public static void main(String[] args) throws SDMException, IOException, InterruptedException {
 
@@ -243,7 +245,7 @@ public class Task_1 {
 				strategy = new Trace_VariableShops(simulator.getSupportedIssueTypes(), architecture, injectionMean, injectionVariance);
 			}
 			simulator.setInjectionStrategy(strategy);
-			
+		
 	
 			/*
 			 * Start the simulation
@@ -290,16 +292,23 @@ public class Task_1 {
 			
 			RuleSelector.setGlobalState(architecture);
 			
-			
 			for (Issue issue : allIssues) {
-				if (multipleRootCauses) {
-					RuleSelector.insertTracewithLength(issue,traceLength);
-				}
-				else if (specificTrace) {
+				
+				if (specificTrace) {
 					RuleSelector.insertSpecificTrace(issue,propagatenTrace);
+				}
+				
+				else if (traceLength != 0) {
+					RuleSelector.insertTracewithLength(issue,traceLength);
 				}
 				else {
 					RuleSelector.insertRandomTrace(issue);
+				}
+				
+				
+				
+				if (sendrootIssue) {
+					RuleSelector.insertRootIssue(issue);
 				}
 			}
 			RuleSelector.updateShopUtilities(architecture);
@@ -323,18 +332,17 @@ public class Task_1 {
 				continue;
 			}
 			
-			HashMap<String, HashMap<String, String>> fixOrder = ChunkedSocketCommunicator.parseJSON(new HashMap<String, HashMap<String, String>>(), fromPython);
+			HashMap<String, HashMap<String, String>> fixOrder = ChunkedSocketCommunicator.parseJSON(
+					new HashMap<String, HashMap<String, String>>(),
+					fromPython
+				);
 			ChunkedSocketCommunicator.println("received");
-			
-
 
 			// add Real Utility Values : Ground Truth
 			if (CURRENT_APPROACH == Approaches.Learning)
 			{for (Issue issue : allIssues)
 				RuleSelector.addActualUtilityIncreaseToRule( issue, UTILITY_FUNCTION);
 			}
-
-
 
 			if (Log) {
 				//System.out.print("\n Run : " + run);
@@ -571,6 +579,14 @@ public class Task_1 {
 			injectionComponentNames = new ArrayList<>(Arrays.asList(configJSON.get("root_causes").split(",")));
 			traceLength = Integer.parseInt(configJSON.get("trace_length"));
 		}
+		if (configJSON.containsKey("send_root_issue")) {
+			sendrootIssue = Boolean.parseBoolean(configJSON.get("send_root_issue"));
+		}
+		
+		if (configJSON.containsKey("trace_length") && configJSON.get("trace_length") != "0") {
+			traceLength = Integer.parseInt(configJSON.get("trace_length"));
+		}
+		
 	}
 
 

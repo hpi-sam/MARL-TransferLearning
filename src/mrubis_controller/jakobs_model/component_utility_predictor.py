@@ -40,7 +40,7 @@ class RidgeUtilityPredictor():
             'request': 'LOAD',
         }
 
-    def load_train_data(self, path=Path('../../data/TrainingmRUBiS_Theta0.05_NonStationary.csv')):
+    def load_train_data(self, path=Path('marl/data/TrainingmRUBiS_Theta0.05_NonStationary.csv')):
         data = pd.read_csv(
             path,
             usecols=self.train_cols['features'] + [self.train_cols['y']]

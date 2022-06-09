@@ -10,13 +10,13 @@ class RobustnessComponent:
         if config is None:
             self.config = {
                 'actor_lower_threshold': 0,  # value against which the specified statistic is compared
-                'actor_upper_threshold': 0.75,  # value against which the specified statistic is compared
-                'critic_lower_threshold': 5,  # value against which the specified statistic is compared
-                'critic_upper_threshold': 15,  # value against which the specified statistic is compared
+                'actor_upper_threshold': 0.2,  # value against which the specified statistic is compared
+                'critic_lower_threshold': 0,  # value against which the specified statistic is compared
+                'critic_upper_threshold': 1,  # value against which the specified statistic is compared
                 'evaluation_periods': 5,  # number of periods over which data is compared to the specified threshold
                 'datapoints_to_alarm': 3,
                 # number of data points within the Evaluation Periods that must be breaching to cause the alarm
-                'retrain_episodes': 100,
+                'retrain_episodes': 50,
             }
 
         self.agents_status = {index: 'INSUFFICIENT_DATA' for index in range(number_of_agents)}
@@ -48,21 +48,23 @@ class RobustnessComponent:
             failing_agent_shops = self._get_shops_of_agent_in_charge_for_other_calibrating_agent(agent_index)
             for n in range(len(failing_agent_shops['failing_agent_index'])):
                 challenged_shops = failing_agent_shops['shops'][n].difference(agents[agent_index].shops)
-                for shop in challenged_shops:
-                    if has_shop_remaining_issues(observations_, shop):
-                        # remove current challenge and wait for next agent to solve this challenge
-                        self.calibration_distribution[failing_agent_shops['failing_agent_index'][n]].popitem()
+                fixed_shops = [has_shop_remaining_issues(observations_, shop) for shop in challenged_shops]
+                if sum(fixed_shops) < len(challenged_shops)/2:
+                    # remove current challenge and wait for next agent to solve this challenge
+                    self.calibration_distribution[failing_agent_shops['failing_agent_index'][n]].popitem()
 
-                        # check if all agents were not able to help the agent
-                        if len(self.calibration_distribution[
-                                   failing_agent_shops['failing_agent_index'][n]].values()) == 0:
-                            if self.previously_stable_agents[failing_agent_shops['failing_agent_index'][n]]:
-                                self._copy_agent(agents, failing_agent_shops['failing_agent_index'][n])
-                            self.agents_status[failing_agent_shops['failing_agent_index'][n]] = 'RETRAIN'
-                            self.retrain_count[failing_agent_shops['failing_agent_index'][n]] = 0
-                    else:
-                        self._move_shops(agents, failing_agent_shops['failing_agent_index'][n], agent_index,
-                                         challenged_shops)
+                    # check if all agents were not able to help the agent
+                    if len(self.calibration_distribution[
+                               failing_agent_shops['failing_agent_index'][n]].values()) == 0:
+                        if self.previously_stable_agents[failing_agent_shops['failing_agent_index'][n]]:
+                            self._copy_agent(agents, failing_agent_shops['failing_agent_index'][n])
+                        self.agents_status[failing_agent_shops['failing_agent_index'][n]] = 'RETRAIN'
+                        self.retrain_count[failing_agent_shops['failing_agent_index'][n]] = 0
+                else:
+                    self._move_shops(agents, failing_agent_shops['failing_agent_index'][n], agent_index,
+                                     challenged_shops)
+                    # shops are removed from failing agent, thus no other distribution has to be tested
+                    self.calibration_distribution[failing_agent_shops['failing_agent_index'][n]] = {}
 
     def get_execution_plan(self, agent_index):
         """ this is the EXECUTE stage for the challenge of the agents
@@ -218,7 +220,7 @@ class RobustnessComponent:
 
     def _is_agent_check_plausible(self, agent, relevant_history):
         """ filter agents which would have chosen the exact same action that was wrong """
-        actions = agent.choose_action(relevant_history['observations'])
+        actions, _regrets = agent.choose_action(relevant_history['observations'])
         actions = {action['shop']: action['component'] for action in actions}
         if any(actions[historic_action['shop']] == historic_action['component'] for historic_action in
                relevant_history['actions'].values()):

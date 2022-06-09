@@ -24,6 +24,22 @@ def encode_observations(observations):
     return np.array(encoded_observations, dtype=float)
 
 
+def get_root_cause(observations):
+    for idx, component in enumerate(observations.values()):
+        if "root_issue" in component:
+            return idx, list(observations.keys())[idx]
+
+
+def output_probabilities(probabilities):
+    output = []
+    for index, p in enumerate(probabilities):
+        if p >= 0.01:
+            output.append('\033[92m' + str(index) + ": " + "{:.2f}".format(p) + '\033[0m')
+        else:
+            output.append(str(index) + ": " + "{:.2f}".format(p))
+    # print(' '.join(output))
+
+
 class Agent:
     def __init__(self, shops, action_space_inverted, load_models_data, ridge_regression_train_data_path, index=0,
                  lr=0.001, layer_dims=None, training_activated=True):
@@ -67,15 +83,21 @@ class Agent:
             returns sorted list
         """
         actions = []
+        regrets = {}
+        root_causes = {}
         for shop_name, components in observations.items():
+            regret = None
             state = encode_observations(components)[np.newaxis, :]
             if state.sum() > 0:  # skip shops without any failure
-                if self.train:
-                    action, probability = self.choose_from_memory(state, shop_name, components)
-                else:
-                    probabilities = self.policy.predict(state)[0]
-                    action = np.random.choice(self.action_space, p=probabilities)
-                    probability = probabilities[action]
+                probabilities = self.policy.predict(state)[0]
+                # if self.train:
+                action, probability = self.choose_from_memory(state, shop_name, components)
+                # else:
+                #     action = np.random.choice(self.action_space, p=probabilities)
+                #     probability = probabilities[action]
+                output_probabilities(probabilities)
+                root_cause_index, root_cause_name = get_root_cause(components)
+                regret = 1.0 - probabilities[root_cause_index]
                 decoded_action = _decoded_action(action, observations)
                 step = {'shop': shop_name, 'component': decoded_action}
                 if self.stage >= 1:
@@ -85,7 +107,9 @@ class Agent:
                     # reduce predicted utility by uncertainty
                     step['predicted_utility'] *= probability
                 actions.append(step)
-        return actions
+                regrets[shop_name] = regret
+                root_causes[shop_name] = root_cause_name
+        return actions, regrets, root_causes
 
     def choose_from_memory(self, state, shop_name, components):
         if self.obs_in_memory(shop_name, components):
@@ -132,8 +156,8 @@ class Agent:
                 log_lik = _actions * K.log(out)
                 actor_loss = K.sum(-log_lik * delta)
             grads = tape.gradient(actor_loss, self.actor.trainable_variables)
-
-            self.optimizer.apply_gradients(zip(grads, self.actor.trainable_variables))
+            if self.train:
+                self.optimizer.apply_gradients(zip(grads, self.actor.trainable_variables))
 
             metrics.append({"actor": float(actor_loss), "critic": critic_history.history['loss'][0]})
         return metrics
@@ -168,7 +192,8 @@ class Agent:
         probs = Dense(self.n_actions, activation='softmax', name='probs')(dense_layer)
         values = Dense(1, activation='linear', name='values')(dense_layer)
 
-        actor = Model(inputs=[model_input, delta], outputs=[probs])
+        # actor = Model(inputs=[model_input, delta], outputs=[probs])
+        actor = Model(inputs=[model_input], outputs=[probs])
 
         critic = Model(inputs=[model_input], outputs=[values])
         critic.compile(optimizer=Adam(lr=self.beta), loss='mean_squared_error')

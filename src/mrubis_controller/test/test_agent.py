@@ -18,7 +18,7 @@ def init_agent(shops=None):
     agent = Agent(index=0, shops=shops,
                   action_space_inverted=action_space,
                   load_models_data=None,
-                  ridge_regression_train_data_path=Path('./data/TrainingmRUBiS_Theta0.05_NonStationary.csv'))
+                  ridge_regression_train_data_path=Path('marl/data/TrainingmRUBiS_Theta0.05_NonStationary.csv'))
     return episode, agent
 
 
