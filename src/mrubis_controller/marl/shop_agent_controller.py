@@ -48,14 +48,14 @@ class ShopAgentController:
             next_action_tensor = self.actors[shop_name](next_observation_tensor)
             next_utility_tensor = self.critics[shop_name](next_observation_tensor, next_action_tensor.detach())
 
-            # Advantage. Q_t+1 + R - Q_t
             critic_loss = torch.pow(torch.tensor(reward[shop_name]) + self.alpha * (next_utility_tensor.detach() - raw_action.expected_utility_tensor), 2)
             critic_loss.backward()
             self.critic_optimizers[shop_name].step()
-            # Actor_loss = Q_t - alpha * log(pi(a_t|s_t))
+            # Advantage. Q_t+1 + R - Q_t
             advantage = torch.tensor(reward[shop_name]) + 0.99 * next_utility_tensor - raw_action.expected_utility_tensor
             advantage = advantage.detach()
             if self.advantage_loss:
+                # Actor_loss = Q_t - alpha * log(pi(a_t|s_t))
                 actor_loss = advantage * raw_action.action_tensor[raw_action.action_index].log()
             else:
                 actor_loss = raw_action.expected_utility_tensor.detach() - self.alpha * raw_action.action_tensor[raw_action.action_index].log()
