@@ -7,6 +7,7 @@ from entities.shop import Shop
 
 from marl.agent.actor import LSTMActor, LinearActor
 from marl.agent.critic import EmbeddingCritic, LinearConcatCritic, WeightedEmbeddingCritic
+from marl.mrubis_data_helper import has_shop_remaining_issues
 
 class ShopAgentController:
     def __init__(
@@ -17,9 +18,9 @@ class ShopAgentController:
     ):
         self.actors = {shop: actor.clone() for shop in shops}
         self.critics = {shop: critic.clone() for shop in shops}
-        self.actor_optimizers = {shop: torch.optim.Adam(self.actors[shop].parameters(), lr=0.01) for shop in shops}
-        self.critic_optimizers = {shop: torch.optim.Adam(self.critics[shop].parameters(), lr=0.01) for shop in shops}
-        self.critic_loss = torch.nn.L1Loss()
+        self.actor_optimizers = {shop: torch.optim.Adam(self.actors[shop].parameters(), lr=1e-4) for shop in shops}
+        self.critic_optimizers = {shop: torch.optim.Adam(self.critics[shop].parameters(), lr=1e-4) for shop in shops}
+        self.alpha = 0.95
 
     def reset_optimizers(self):
         for optimizer in self.actor_optimizers.values():
@@ -31,18 +32,25 @@ class ShopAgentController:
         actions = {}
         self.reset_optimizers()
         for shop_name, shop_observation in observations.shops.items():
+            if not has_shop_remaining_issues(observations, shop_name):
+                continue
             encoded_observation = shop_observation.encode_to_tensor()
             action_tensor = self.actors[shop_name](encoded_observation)
-            expected_utility = self.critics[shop_name](encoded_observation, action_tensor)
-            action = Components.from_tensor(action_tensor)
-            actions[shop_name] = RawAction(Action(shop_name, action, expected_utility.item()), action_tensor, expected_utility)
+            expected_utility = self.critics[shop_name](encoded_observation, action_tensor.detach())
+            action, index = Components.from_tensor(action_tensor)
+            actions[shop_name] = RawAction(Action(shop_name, action, expected_utility.item()), action_tensor, expected_utility, index)
         return actions
 
-    def learn(self, action: dict[Shop, RawAction], reward: Reward):
+    def learn(self, action: dict[Shop, RawAction], reward: Reward, next_observation: SystemObservation):
         for shop_name, raw_action in action.items():
-            expected_reward = raw_action.expected_utility_tensor
-            actual_reward = torch.tensor(reward[shop_name])
-            loss = self.critic_loss.forward(expected_reward, actual_reward)
-            loss.backward()
-            self.actor_optimizers[shop_name].step()
+            next_observation_tensor = next_observation.shops[shop_name].encode_to_tensor()
+            next_action_tensor = self.actors[shop_name](next_observation_tensor)
+            next_utility_tensor = self.critics[shop_name](next_observation_tensor, next_action_tensor.detach())
+
+            critic_loss = torch.pow(torch.tensor(reward[shop_name]) + self.alpha * (next_utility_tensor.detach() - raw_action.expected_utility_tensor), 2)
+            critic_loss.backward()
             self.critic_optimizers[shop_name].step()
+            # Actor_loss = Q_t - alpha * log(pi(a_t|s_t))
+            actor_loss = raw_action.expected_utility_tensor.detach() - self.alpha * raw_action.action_tensor[raw_action.action_index].log()
+            actor_loss.backward()
+            self.actor_optimizers[shop_name].step()

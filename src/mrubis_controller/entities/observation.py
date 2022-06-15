@@ -98,6 +98,7 @@ class RawAction:
     action: Action
     action_tensor: torch.Tensor
     expected_utility_tensor: torch.Tensor
+    action_index: int
 
     def to_sendable_json(self) -> Dict:
         return self.shop.to_sendable_json()

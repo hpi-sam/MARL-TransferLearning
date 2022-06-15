@@ -8,7 +8,7 @@ from entities.observation import SystemObservation
 from entities.reward import Reward
 
 from marl.chunkedsocketcommunicator import ChunkedSocketCommunicator
-from marl.mrubis_data_helper import get_current_utility, has_system_remaining_issues
+from marl.mrubis_data_helper import get_current_utility, has_system_remaining_issues, system_issues_count
 
 from numpy.random import normal
 
@@ -87,7 +87,6 @@ class MrubisEnv(gym.Env):
         message = self.communicator.readln()
         assert message == "received"
         self.observation = SystemObservation.from_dict(self._get_state())
-
         _reward: Reward = self._get_reward(self.observation)[0]
 
         for shop in _reward:
@@ -106,7 +105,6 @@ class MrubisEnv(gym.Env):
             self.inner_t = 0
             self.stats = self._init_stats()
             self.terminated = True
-
         return _reward, self.observation, self.terminated, info
 
     def reset(self):
@@ -124,9 +122,9 @@ class MrubisEnv(gym.Env):
 
         self.t = 0
         self._reset_mrubis()
-        self.observation = self._get_state()
+        self.observation = SystemObservation.from_dict(self._get_state())
         self.prior_utility = get_current_utility(self.observation)
-        self.action_space = [components for shops, components in self.observation.items()][0].keys()
+        self.action_space = [components for shops, components in self.observation.shops.items()][0].components.keys()
         self.stats = self._init_stats()
         self.terminated = False
         return self.observation
@@ -153,13 +151,12 @@ class MrubisEnv(gym.Env):
         return self.observation, self._get_reward(self.observation), self.terminated, self._info()
 
     def _is_fixed(self):
-        has_system_remaining_issues(self.observation)
+        return not has_system_remaining_issues(self.observation)
 
     def _get_reward(self, observation):
         """ returns the extracted reward per shop
         """
         current_utility = get_current_utility(observation)
-        # print(current_utility)
         diff_utility = {shop: current_utility[shop] - utility for shop, utility in self.prior_utility.items()}
         self.prior_utility = current_utility
         system_utility = sum(diff_utility.values())
@@ -205,7 +202,7 @@ class MrubisEnv(gym.Env):
 
     def _init_stats(self):
         stats = {}
-        for shop in self.observation:
+        for shop in self.observation.shops:
             stats[shop] = -1
         return stats
 

@@ -55,7 +55,7 @@ class LinearActor(Actor):
             if activation is not None:
                 layers.append(activation())
             layers.append(nn.Linear(dimensions[-1], action_length))
-        self.model = nn.Sequential(*layers, torch.nn.Sigmoid())
+        self.model = nn.Sequential(*layers, torch.nn.Softmax())
 
     def forward(self, observations: torch.Tensor):
         """

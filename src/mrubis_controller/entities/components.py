@@ -1,5 +1,6 @@
 import enum
 from typing import List
+import numpy as np
 
 import torch
 
@@ -31,7 +32,8 @@ class Components(str, enum.Enum):
         return sorted([component.value for component in Components])
     @classmethod
     def from_tensor(self, tensor: torch.Tensor) -> 'Components':
-        return Components.list()[tensor.argmax()]
+        index = np.random.choice(tensor.size(0), 1, p=tensor.detach().numpy()).item()
+        return Components.list()[index], index
     @classmethod
     def value_from_tensor(self, tensor: torch.Tensor) -> str:
         return Components.value_list()[tensor.argmax()]

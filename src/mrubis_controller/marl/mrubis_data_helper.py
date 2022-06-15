@@ -62,3 +62,11 @@ def has_shop_remaining_issues(observations: SystemObservation, shop: Shop):
 def has_system_remaining_issues(observations: SystemObservation):
     """ checks whether the system has remaining issues """
     return any(has_shop_remaining_issues(observations, shop) for shop in observations.shops)
+
+def system_issues_count(observation: SystemObservation):
+    """ returns the number of remaining issues """
+    return sum(map(shop_issues_count, observation.shops.values()))
+
+def shop_issues_count(observation: ShopObservation):
+    """ returns the number of remaining issues """
+    return sum(map(lambda x: 1 if x.failure_name != ComponentFailure.NONE else 0, observation.components.values()))
