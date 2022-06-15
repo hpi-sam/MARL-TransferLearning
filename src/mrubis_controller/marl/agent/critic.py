@@ -81,18 +81,19 @@ class WeightedEmbeddingCritic(Module):
         return WeightedEmbeddingCritic(self.observation_length, self.action_length, self.embedding_dim)
 
 class LinearConcatCritic(Module):
-    def __init__(self, observation_length=18, action_length=18) -> None:
+    def __init__(self, observation_length=270, action_length=18) -> None:
         super().__init__()
         self.observation_length = observation_length
         self.action_length = action_length
         self.linear = nn.Linear(observation_length + action_length, 1)
 
-    def forward(self, observation, actions) -> torch.Tensor:
+    def forward(self, observation: torch.Tensor, actions: torch.Tensor) -> torch.Tensor:
         """
         observation: (batch_size, components)
         actions: (batch_size, components)
         """
-        return self.linear(torch.cat((observation, actions), dim=1))
+        cat_dim = 0 if observation.dim() == 1 else 1
+        return self.linear(torch.cat((observation, actions), dim=cat_dim))
 
     def clone(self):
         return LinearConcatCritic(self.observation_length, self.action_length)

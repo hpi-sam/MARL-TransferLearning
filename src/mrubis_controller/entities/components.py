@@ -3,7 +3,7 @@ from typing import List
 
 import torch
 
-class Components(enum.Enum):
+class Components(str, enum.Enum):
     AUTHENTICATION_SERVICE = 'Authentication Service'
     AVAILABILITY_ITEM_FILTER = 'Availability Item Filter'
     BID_AND_BUY_SERVICE = 'Bid and Buy Service'
@@ -25,7 +25,7 @@ class Components(enum.Enum):
 
     @classmethod
     def list(self) -> List['Components']:
-        return sorted([component for component in Components])
+        return sorted([component for component in Components], key=lambda component: component.value)
     @classmethod
     def value_list(self) -> List[str]:
         return sorted([component.value for component in Components])

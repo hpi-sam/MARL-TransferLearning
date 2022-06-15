@@ -2,6 +2,7 @@ import wandb
 from entities.observation import SystemObservation
 from marl.mrubis_env import MrubisEnv
 from marl.shop_agent_controller import ShopAgentController
+import alive_progress as ap
 
 class Runner:
     def __init__(self, env: MrubisEnv, agent_controller: ShopAgentController):
@@ -20,23 +21,27 @@ class Runner:
         """ runs the simulation """
         self.reset()
         step = 0
-        for episode in range(episodes):
-            print("Episode: {}".format(episode))
-            wandb.log({'episode': episode}, commit=False, step=step)
-            terminated = False
-            current_observations = SystemObservation.from_dict(self.env.reset())
-            while not terminated:
-                step += 1
-                actions = self.agent_controller.choose_actions(current_observations)
-                sendable_actions = list(map(lambda x: x.action, actions.values()))
-                reward, next_observations, terminated, env_info = self.env.step(sendable_actions)
-                self.agent_controller.learn(actions, reward)
-                current_observations = next_observations
-                if terminated:
-                    for shop, count in env_info['stats'].items():
-                        print(f"{shop} fixed after: {count}")
-                        wandb.log({f"{shop}_fixed": count}, step=step)
-            print(f"episode {episode} done")
+        with ap.alive_bar(title="Running") as bar:
+            for episode in range(episodes):
+                wandb.log({'episode': episode}, commit=False, step=step)
+                terminated = False
+                current_observations = SystemObservation.from_dict(self.env.reset())
+                while not terminated:
+                    bar()
+                    bar.text = f"Episode: {episode} Step: {step}"
+                    step += 1
+                    actions = self.agent_controller.choose_actions(current_observations)
+                    sendable_actions = list(map(lambda x: x.action.to_sendable_json(), actions.values()))
+                    sendable_actions = {i: e for i, e in enumerate(sendable_actions)}
+                    reward, next_observations, terminated, env_info = self.env.step(sendable_actions)
+                    self.agent_controller.learn(actions, reward)
+                    current_observations = next_observations
+                    if terminated:
+                        for shop, count in env_info['stats'].items():
+                            print(f"{shop} fixed after: {count}")
+                            wandb.log({f"{shop}_fixed": count}, step=step)
+                        self.env.reset()
+                print(f"episode {episode} done")
 
 if __name__ == "__main__":
     episodes = 400

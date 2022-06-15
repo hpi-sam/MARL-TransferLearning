@@ -35,13 +35,13 @@ class ShopAgentController:
             action_tensor = self.actors[shop_name](encoded_observation)
             expected_utility = self.critics[shop_name](encoded_observation, action_tensor)
             action = Components.from_tensor(action_tensor)
-            actions[shop_name] = RawAction(Action(shop_name, action, expected_utility), action_tensor, expected_utility)
+            actions[shop_name] = RawAction(Action(shop_name, action, expected_utility.item()), action_tensor, expected_utility)
         return actions
 
     def learn(self, action: dict[Shop, RawAction], reward: Reward):
         for shop_name, raw_action in action.items():
             expected_reward = raw_action.expected_utility_tensor
-            actual_reward = reward[shop_name]
+            actual_reward = torch.tensor(reward[shop_name])
             loss = self.critic_loss.forward(expected_reward, actual_reward)
             loss.backward()
             self.actor_optimizers[shop_name].step()

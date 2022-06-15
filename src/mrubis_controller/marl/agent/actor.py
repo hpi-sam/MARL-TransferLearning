@@ -40,7 +40,7 @@ class LSTMActor(Module):
         return LSTMActor(self.input_size, self.hidden_size, self.num_layers, self.num_actions)
 
 class LinearActor(Actor):
-    def __init__(self, observation_length=18, action_length=18, activation=torch.nn.Tanh, dimensions=[18,18,18]):
+    def __init__(self, observation_length=270, action_length=18, activation=torch.nn.Tanh, dimensions=[156,100,50]):
         super(LinearActor, self).__init__(observation_length=18, action_length=18)
         self.observation_length=observation_length
         self.action_length=action_length

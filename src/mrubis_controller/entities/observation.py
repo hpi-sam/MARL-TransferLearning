@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+import dataclasses
 from typing import Dict, List
 
 import torch
@@ -26,7 +27,6 @@ class ComponentObservation:
 
     @staticmethod
     def from_dict(d: Dict) -> 'ComponentObservation':
-        print(d)
         return ComponentObservation(
                 failure_name=ComponentFailure[d['failure_name'].upper()],
                 **{ k: float(v) for k, v in d.items() if k not in ['failure_name', 'uid', 'root_issue']}
@@ -59,11 +59,11 @@ class ShopObservation:
         component_keys = sorted(list(d.keys()))
         return ShopObservation(
             components={component_name: ComponentObservation.from_dict(d[component_name]) for component_name in component_keys},
-            system_utility=next(iter(d.values())).values()['shop_utility']
+            shop_utility=float(next(iter(d.values()))['shop_utility'])
         )
 
     def encode_to_tensor(self) -> torch.Tensor:
-        return torch.concat([component.encode_to_tensor() for component in self.components.values()], dtype=torch.float32)
+        return torch.concat([component.encode_to_tensor() for component in self.components.values()])
 
 @dataclass
 class SystemObservation:
@@ -74,11 +74,14 @@ class SystemObservation:
     def from_dict(d: Dict) -> 'SystemObservation':
         return SystemObservation(
             shops= {shop_name: ShopObservation.from_dict(shop_obs) for shop_name, shop_obs in d.items()},
-            system_utility=next(iter(next(iter(d.values())).values()))['system_utility']
+            system_utility=float(next(iter(next(iter(d.values())).values()))['system_utility'])
         )
     
     def encode_to_tensors(self) -> Dict[str, torch.Tensor]:
         return {shop_name: shop.encode_to_tensor() for shop_name, shop in self.shops.items()}
+
+    def shop_utilites(self) -> Dict[Shop, float]:
+        return {shop: shop_obs.shop_utility for shop, shop_obs in self.shops.items()}
 
 @dataclass
 class Action:
@@ -86,8 +89,15 @@ class Action:
     component: Components
     predicted_utility: float
 
+    def to_sendable_json(self) -> Dict:
+        return dataclasses.asdict(self)
+
+
 @dataclass
 class RawAction:
     action: Action
     action_tensor: torch.Tensor
     expected_utility_tensor: torch.Tensor
+
+    def to_sendable_json(self) -> Dict:
+        return self.shop.to_sendable_json()

@@ -8,7 +8,7 @@ from entities.observation import SystemObservation
 from entities.reward import Reward
 
 from marl.chunkedsocketcommunicator import ChunkedSocketCommunicator
-from marl.mrubis_data_helper import get_current_utility
+from marl.mrubis_data_helper import get_current_utility, has_system_remaining_issues
 
 from numpy.random import normal
 
@@ -153,11 +153,7 @@ class MrubisEnv(gym.Env):
         return self.observation, self._get_reward(self.observation), self.terminated, self._info()
 
     def _is_fixed(self):
-        for shop in self.observation:
-            for component in self.observation[shop]:
-                if self.observation[shop][component]["failure_name"] != "None":
-                    return False
-        return True
+        has_system_remaining_issues(self.observation)
 
     def _get_reward(self, observation):
         """ returns the extracted reward per shop

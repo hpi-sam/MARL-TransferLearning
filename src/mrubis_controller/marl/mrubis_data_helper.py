@@ -1,6 +1,12 @@
 
 
 
+from typing import Dict, Union
+from entities.component_failure import ComponentFailure
+from entities.observation import ComponentObservation, ShopObservation, SystemObservation
+from entities.shop import Shop
+
+
 def build_observations(agents, agent_index, observation, shops=None):
     """ extracts the relevant observations of the env per agent """
     relevant_shops = agents[agent_index].shops if shops is None else shops
@@ -35,19 +41,24 @@ def build_replay_buffer(agents, index, replay_buffer):
         }
 
 
-def get_failing_component(current_shop):
+def get_failing_component(current_shop: ShopObservation):
     """ returns the current failing component or None if no failure available """
-    for component in current_shop:
-        if current_shop[component]['failure_name'] != "None":
+    for component in current_shop.components.values():
+        if component.failure_name != ComponentFailure.NONE:
             return component
     return None
 
+def get_current_utility(observation: Union[ShopObservation, SystemObservation]):
+    if isinstance(observation, SystemObservation):
+        return observation.shop_utilites()
+    if isinstance(observation, ShopObservation):
+        return observation.shop_utility
+    return SystemObservation.from_dict(observation).shop_utilites()
 
-def get_current_utility(observation):
-    return {shop: float(list(components.items())[0][1]['shop_utility']) for shop, components in
-            observation.items()}
+def has_shop_remaining_issues(observations: SystemObservation, shop: Shop):
+    """ checks whether a shop has remaining issues """
+    return any(map(lambda x: x.failure_name != ComponentFailure.NONE, observations.shops[shop].components.values()))
 
-
-def has_shop_remaining_issues(observations, shop):
-    """ checks whether a shop as remaining issues """
-    return any(lambda x: x["failure_name"].upper() != "NONE", observations[shop].values())
+def has_system_remaining_issues(observations: SystemObservation):
+    """ checks whether the system has remaining issues """
+    return any(has_shop_remaining_issues(observations, shop) for shop in observations.shops)
