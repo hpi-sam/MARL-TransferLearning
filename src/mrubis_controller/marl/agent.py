@@ -7,7 +7,6 @@ from keras.layers import Dense, Input
 from keras.models import Model
 from keras.optimizers import Adam
 
-from marl.helper import get_current_time
 from marl.sorting.agent_action_sorter import AgentActionSorter
 
 
@@ -48,10 +47,6 @@ class Agent:
         self.train = training_activated
         self.base_model_dir = './mrubis_controller/marl/data/models'
         self.base_log_dir = './mrubis_controller/marl/data/logs/'
-        self.start_time = get_current_time()
-        self.tb_callback = tf.keras.callbacks.TensorBoard(
-            log_dir=f"{self.base_log_dir}/{self.start_time}/agent_{self.index}_critic",
-            histogram_freq=1)
 
         self.load_models_data = load_models_data
         self.ridge_regression_train_data_path = ridge_regression_train_data_path
@@ -152,6 +147,8 @@ class Agent:
 
             with tf.GradientTape() as tape:
                 y_pred = self.actor(state)
+                # y_pred [0.5, 0.2, 0.3]
+                # _action [0, 1, 0]
                 out = K.clip(y_pred, 1e-8, 1 - 1e-8)
                 log_lik = _actions * K.log(out)
                 actor_loss = K.sum(-log_lik * delta)
@@ -201,10 +198,6 @@ class Agent:
         policy = Model(inputs=[model_input], outputs=[probs])
 
         return actor, critic, policy
-
-    def save(self, episode):
-        self.actor.save(f"{self.base_model_dir}/{self.start_time}/agent_{self.index}/actor/episode_{episode}")
-        self.critic.save(f"{self.base_model_dir}/{self.start_time}/agent_{self.index}/critic/episode_{episode}")
 
     def load_models(self, load_models_data):
         base_dir = f"{self.base_model_dir}/{load_models_data['start_time']}/agent_{self.index}"

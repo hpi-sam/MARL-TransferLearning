@@ -48,8 +48,7 @@ def main():
             actor = LinearActor()
             critic = LinearConcatCritic()
             agent_controller = ShopAgentController(actor, critic, shops)
-            Runner(env,agent_controller ).run(episodes)
-
+            Runner(env,agent_controller).run(episodes)
 
 if __name__ == '__main__':
     main()
