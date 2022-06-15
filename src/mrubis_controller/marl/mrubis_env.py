@@ -4,6 +4,8 @@ import logging
 import json
 from time import sleep
 from subprocess import PIPE, Popen
+from entities.observation import SystemObservation
+from entities.reward import Reward
 
 from marl.chunkedsocketcommunicator import ChunkedSocketCommunicator
 from marl.mrubis_data_helper import get_current_utility
@@ -84,19 +86,19 @@ class MrubisEnv(gym.Env):
             self.communicator.println(json.dumps({}))
         message = self.communicator.readln()
         assert message == "received"
-        self.observation = self._get_state()
+        self.observation = SystemObservation.from_dict(self._get_state())
 
-        _reward = self._get_reward(self.observation)
+        _reward: Reward = self._get_reward(self.observation)[0]
 
-        for shop in _reward[0]:
+        for shop in _reward:
             clamp = True
-            if _reward[0][shop] > 0:
-                _reward[0][shop] = 17
+            if _reward[shop] > 0:
+                _reward[shop] = 17
                 self.stats[shop] = self.inner_t
                 clamp = False
-            _reward[0][shop] += self.reward_variance * normal()
+            _reward[shop] += self.reward_variance * normal()
             if clamp:
-                _reward[0][shop] = min(0, _reward[0][shop])
+                _reward[shop] = min(0, _reward[shop])
 
         info = self._info()
         if actions is None or self._is_fixed():

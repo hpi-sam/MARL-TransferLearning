@@ -1,4 +1,4 @@
-from marl.agent import encode_observations
+
 
 
 def build_observations(agents, agent_index, observation, shops=None):
@@ -50,5 +50,4 @@ def get_current_utility(observation):
 
 def has_shop_remaining_issues(observations, shop):
     """ checks whether a shop as remaining issues """
-    one_hot = encode_observations(observations[shop])
-    return sum(one_hot) > 0
+    return any(lambda x: x["failure_name"].upper() != "NONE", observations[shop].values())
