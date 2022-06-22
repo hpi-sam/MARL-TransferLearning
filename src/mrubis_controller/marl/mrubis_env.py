@@ -18,7 +18,7 @@ logger.setLevel(logging.INFO)
 
 
 class MrubisEnv(gym.Env):
-    def __init__(self, json_path='path.json', external_start=True, episodes=500, negative_reward=-1,
+    def __init__(self, json_path='path.json', external_start=True, episodes=500, negative_reward=0,
                  propagation_probability=0.5, shops=10, injection_mean=6, injection_variance=2, trace="",
                  root_causes = "", trace_length = 0, send_root_issue=False, reward_variance=0):
         super(MrubisEnv, self).__init__()

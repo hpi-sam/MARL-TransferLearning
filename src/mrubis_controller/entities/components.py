@@ -40,9 +40,17 @@ class Components(str, enum.Enum):
         return Components.list()[index], index
 
     @classmethod
-    def index_of_tensor(self, tensor: torch.Tensor) -> torch.IntTensor:
-        return torch.IntTensor([np.random.choice(tensor.size(
-            0), 1, p=ten.detach().numpy()).item() for ten in tensor])
+    def index_of_tensor(self, tensor: torch.Tensor) -> torch.LongTensor:
+        output = torch.LongTensor([
+            np.random.choice(
+                tensor.size(1),
+                1,
+                p=ten.detach().numpy()
+            ).item() for ten in tensor
+        ])
+        if len(output.shape) == 1:
+            output.unsqueeze_(-1)
+        return output
 
     @classmethod
     def value_from_tensor(self, tensor: torch.Tensor) -> str:

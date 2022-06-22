@@ -1,7 +1,6 @@
 import wandb
 from marl.mrubis_data_helper import has_shop_remaining_issues
 from marl.mrubis_env import MrubisEnv
-from marl.replay_buffer import ReplayBuffer
 from marl.shop_agent_controller import ShopAgentController
 import alive_progress as ap
 
@@ -48,7 +47,6 @@ class Runner:
                             if count != -1:
                                 wandb.log({f"{shop}_fixed": count}, step=step)
                         self.env.reset()
-
                 print(f"episode {episode} done")
 
 class ReplayBufferRunner:
@@ -86,8 +84,9 @@ class ReplayBufferRunner:
                     sendable_actions = list(map(lambda x: x.action.to_sendable_json(), valid_actions))
                     sendable_actions = {i: e for i, e in enumerate(sendable_actions)}
                     reward, next_observations, terminated, env_info = self.env.step(sendable_actions)
-                    self.agent_controller.learn(actions, reward, next_observations)
-                    self.agent_controller.learn_from_replaybuffer(10)
+                    # self.agent_controller.learn(actions, reward, next_observations)
+                    self.agent_controller.add_to_replaybuffer(actions, reward, next_observations)
+                    self.agent_controller.learn_from_replaybuffer(100)
                     current_observations = next_observations
                     if terminated:
                         for shop, count in env_info['stats'].items():

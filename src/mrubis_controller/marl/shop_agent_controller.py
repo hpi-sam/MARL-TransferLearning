@@ -1,6 +1,7 @@
-from curses import raw
-from typing import Dict, List, Union
+from typing import Dict, Iterable, Union
+import numpy as np
 import torch
+import wandb
 from entities.components import Components
 from entities.observation import Action, RawAction, SystemObservation
 from entities.reward import Reward
@@ -17,20 +18,21 @@ class ShopAgentController:
         self,
         actor: Union[LSTMActor, LinearActor],
         critic: Union[EmbeddingCritic, WeightedEmbeddingCritic, LinearConcatCritic],
-        shops: List[str],
+        shops: Iterable[str],
     ):
-        self.shops = shops
+        self.shops = list(shops)
         self.actors = {shop: actor.clone() for shop in shops}
         self.critics = {shop: critic.clone() for shop in shops}
-        self.actor_optimizers = {shop: torch.optim.Adam(self.actors[shop].parameters(), lr=1e-4) for shop in shops}
-        self.critic_optimizers = {shop: torch.optim.Adam(self.critics[shop].parameters(), lr=1e-4) for shop in shops}
+        self.actor_optimizers = {shop: torch.optim.SGD(self.actors[shop].parameters(), lr=1e-4) for shop in shops}
+        self.critic_optimizers = {shop: torch.optim.SGD(self.critics[shop].parameters(), lr=1e-4) for shop in shops}
         self.alpha = 0.95
         self.replay_buffers = {shop: ReplayBuffer() for shop in shops}
 
         # Replay buffer training hyper parameters
-        self.delta = 0.95
-        self.discount = 0.01
-        self.alpha_rb = 0.99
+        self.gamma = 0.99
+        self.alpha_rb = 0.2
+
+        self.visited_shop = np.zeros(len(shops), dtype=np.bool_)
 
     def reset_optimizers(self):
         for optimizer in self.actor_optimizers.values():
@@ -64,11 +66,13 @@ class ShopAgentController:
             next_action_tensor = self.actors[shop_name](next_observation_tensor)
             next_utility_tensor = self.critics[shop_name](next_observation_tensor, next_action_tensor.detach())
 
-            critic_loss = torch.pow(reward_tensor + self.alpha * (next_utility_tensor.detach() - raw_action.expected_utility_tensor), 2)
+            # critic_loss = torch.pow(reward_tensor + self.alpha * (next_utility_tensor.detach() - raw_action.expected_utility_tensor), 2)
+            critic_loss = torch.pow(reward_tensor - raw_action.expected_utility_tensor, 2)
             critic_loss.backward()
             self.critic_optimizers[shop_name].step()
             # Advantage. Q_t+1 + R - Q_t
             advantage = reward_tensor + 0.99 * next_utility_tensor - raw_action.expected_utility_tensor
+            # advantage = reward_tensor - raw_action.expected_utility_tensor
             advantage = advantage.detach()
             if self.advantage_loss:
                 # Actor_loss = Q_t - alpha * log(pi(a_t|s_t))
@@ -77,16 +81,85 @@ class ShopAgentController:
                 actor_loss = raw_action.expected_utility_tensor.detach() - self.alpha * raw_action.action_tensor[raw_action.action_index].log()
             actor_loss.backward()
             self.actor_optimizers[shop_name].step()
-            self.replay_buffers[shop_name].add(raw_action.observation_tensor, raw_action.action_tensor, reward_tensor, next_observation_tensor)
+            self.replay_buffers[shop_name].add(raw_action.observation_tensor, raw_action.action_tensor, torch.tensor(raw_action.action_index), reward_tensor, next_observation_tensor)
 
     def learn_from_replaybuffer(self, batch_size: int = 1):
         for shop in self.shops:
-            observation, action, reward, next_observation = self.replay_buffers[shop].get_batch(batch_size)
+            if not self.visited_shop[self.shops.index(shop)]:
+                continue
+            observation, action, selected_action, reward, next_observation = self.replay_buffers[shop].get_batch(batch_size)
             critic = self.critics[shop]
             actor = self.actors[shop]
-            next_action_tensor = actor(next_observation)
-            # TODO make this work for batches
-            _selected_action, selected_action_index = Components.from_tensor(next_action_tensor)
-            selected_action_probability = next_action_tensor[selected_action_index]
-            y = reward + self.delta * (1 - self.discount) * (critic(next_observation, next_action_tensor) - self.alpha_rb * torch.log(selected_action_probability))
-            # TODO contiue here
+            critic_optimizer = self.critic_optimizers[shop]
+            actor_optimizer = self.actor_optimizers[shop]
+            critic_optimizer.zero_grad()
+            actor_optimizer.zero_grad()
+            next_actions_tensor = actor(next_observation).detach()
+            selected_action_indices = Components.index_of_tensor(next_actions_tensor)
+            selected_actions_probability = torch.take_along_dim(next_actions_tensor, selected_action_indices, dim=1)
+            # DDPG Y
+            # y = reward + self.gamma * critic(next_observation, next_actions_tensor)
+            # SAC Y
+            y = reward + self.gamma * (critic(next_observation, next_actions_tensor) - self.alpha_rb * torch.log(selected_actions_probability))
+            # Update Q
+            critic_loss = torch.pow((critic(observation, action) - y), 2).sum().divide(batch_size)
+            critic_loss.backward()
+            critic_optimizer.step()
+            # Update π
+            new_chosen_action_probabilities: torch.Tensor = actor(observation) # batch of probability distributions
+            chosen_action_indices = Components.index_of_tensor(new_chosen_action_probabilities) # batch of indices of actions
+            probability_of_selected_actions = torch.take(new_chosen_action_probabilities, chosen_action_indices) # batch of probability of chosen action
+            actor_loss: torch.Tensor = (critic(observation, action) - self.alpha_rb * torch.log(probability_of_selected_actions)).sum().divide(batch_size)
+            actor_loss.backward()
+            actor_optimizer.step()
+            wandb.log({
+                f"{shop} critic_loss": critic_loss.item(),
+                f"{shop} actor_loss": actor_loss.item()
+            })
+    
+    def learn_from_replaybuffer(self, batch_size: int = 1):
+        for shop in self.shops:
+            if not self.visited_shop[self.shops.index(shop)]:
+                continue
+            observation, action, selected_action, reward, next_observation = self.replay_buffers[shop].get_batch(batch_size)
+            critic = self.critics[shop]
+            actor = self.actors[shop]
+            critic_optimizer = self.critic_optimizers[shop]
+            actor_optimizer = self.actor_optimizers[shop]
+            critic_optimizer.zero_grad()
+            actor_optimizer.zero_grad()
+            next_actions_tensor = actor(next_observation).detach()
+            selected_action_indices = Components.index_of_tensor(next_actions_tensor)
+            selected_actions_probability = torch.take_along_dim(next_actions_tensor, selected_action_indices, dim=1)
+            # DDPG Y
+            y = reward + self.gamma * critic(next_observation, next_actions_tensor)
+            # SAC Y
+            # y = reward + self.gamma * (critic(next_observation, next_actions_tensor) - self.alpha_rb * torch.log(selected_actions_probability))
+            # Update Q
+            critic_loss = torch.pow((critic(observation, action) - y), 2).sum().divide(batch_size)
+            critic_loss.backward()
+            critic_optimizer.step()
+            # Update π
+            new_chosen_action_probabilities: torch.Tensor = actor(observation) # batch of probability distributions
+            chosen_action_indices = Components.index_of_tensor(new_chosen_action_probabilities) # batch of indices of actions
+            probability_of_selected_actions = torch.take(new_chosen_action_probabilities, chosen_action_indices) # batch of probability of chosen action
+            actor_loss: torch.Tensor = (critic(observation, action) - self.alpha_rb * torch.log(probability_of_selected_actions)).sum().divide(batch_size)
+            actor_loss.backward()
+            actor_optimizer.step()
+            wandb.log({
+                f"{shop} critic_loss": critic_loss.item(),
+                f"{shop} actor_loss": actor_loss.item()
+            })
+
+    def add_to_replaybuffer(self, action: dict[Shop, RawAction], reward: Reward, next_observation: SystemObservation):
+        for shop_name, raw_action in action.items():
+            self.visited_shop[self.shops.index(shop_name)] = True
+            reward_tensor = torch.tensor(reward[shop_name])
+            next_observation_tensor = next_observation.shops[shop_name].encode_to_tensor()
+            self.replay_buffers[shop_name].add(
+                raw_action.observation_tensor.detach(),
+                raw_action.action_tensor.detach(),
+                torch.tensor(raw_action.action_index).detach(),
+                reward_tensor.detach(),
+                next_observation_tensor.detach()
+            )
