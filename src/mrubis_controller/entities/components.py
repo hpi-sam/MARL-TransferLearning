@@ -40,7 +40,7 @@ class Components(str, enum.Enum):
         return Components.list()[index], index
 
     @classmethod
-    def index_of_tensors(self, tensor: torch.Tensor):
+    def index_of_tensor(self, tensor: torch.Tensor) -> List[int]:
         return [np.random.choice(tensor.size(
             0), 1, p=ten.detach().numpy()).item() for ten in tensor]
 
