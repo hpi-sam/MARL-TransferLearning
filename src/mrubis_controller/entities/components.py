@@ -4,6 +4,7 @@ import numpy as np
 
 import torch
 
+
 class Components(str, enum.Enum):
     AUTHENTICATION_SERVICE = 'Authentication Service'
     AVAILABILITY_ITEM_FILTER = 'Availability Item Filter'
@@ -27,13 +28,22 @@ class Components(str, enum.Enum):
     @classmethod
     def list(self) -> List['Components']:
         return sorted([component for component in Components], key=lambda component: component.value)
+
     @classmethod
     def value_list(self) -> List[str]:
         return sorted([component.value for component in Components])
+
     @classmethod
     def from_tensor(self, tensor: torch.Tensor) -> 'Components':
-        index = np.random.choice(tensor.size(0), 1, p=tensor.detach().numpy()).item()
+        index = np.random.choice(tensor.size(
+            0), 1, p=tensor.detach().numpy()).item()
         return Components.list()[index], index
+
+    @classmethod
+    def index_of_tensors(self, tensor: torch.Tensor):
+        return [np.random.choice(tensor.size(
+            0), 1, p=ten.detach().numpy()).item() for ten in tensor]
+
     @classmethod
     def value_from_tensor(self, tensor: torch.Tensor) -> str:
         return Components.value_list()[tensor.argmax()]
