@@ -25,14 +25,14 @@ class MrubisStarter:
 def main():
     with MrubisStarter():
         sleep(1)
-        wandb.init(project="mrubis_test", entity="mrubis")
         parser = argparse.ArgumentParser()
         parser.add_argument("--runner", action="store_true", default=False, help="start rl runner with dl")
+        parser.add_argument("--wandb", action="store_true", help="Log with wandb")
         args = parser.parse_args()
+        wandb.init(project="mrubis_test", entity="mrubis", mode="online" if args.wandb else "disabled")
         if args.runner:
             episodes = 400
             num_shops = 10
-            # mock_env = MrubisMockEnv(number_of_shops=5, shop_config=[1, 0, False])
             env = MrubisEnv(
                 episodes=episodes,
                 negative_reward=-1,
