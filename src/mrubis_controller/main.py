@@ -31,7 +31,7 @@ def main():
     if not (args.runner ^ args.runner_rp):
         raise Exception("Specify exactly one runner type. See main.py -h for help.")
     with MrubisStarter():
-        sleep(1)
+        sleep(2)
         wandb.init(project="mrubis_test", entity="mrubis", mode="online" if args.wandb else "disabled")
 
         episodes = 400

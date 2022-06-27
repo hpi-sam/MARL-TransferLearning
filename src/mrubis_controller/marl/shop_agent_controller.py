@@ -126,13 +126,13 @@ class ShopAgentController:
             probability_of_selected_actions = torch.take(new_chosen_action_probabilities, chosen_action_indices) # batch of probability of chosen action
             # TODO What we want is to maximize the probability of the action which leads the highest value given by the critic
             # minimize: - sum over actions( probablity of action_i * critic(observation, action_i))
-            component_sum = torch.zeros(observation.shape[0])
+            component_sum = torch.zeros((observation.shape[0], 1))
             eye = torch.eye(self.num_components)
             eye_batch = eye.repeat([observation.shape[0], 1, 1])
             operation = "mult"
             for i in range(self.num_components):
                 if operation == "mult":
-                    component_sum -= critic(observation, eye_batch[:,:,i]) * torch.log(new_chosen_action_probabilities[:,i])
+                    component_sum -= critic(observation, eye_batch[:,:,i]) * torch.log(new_chosen_action_probabilities[:,i]).unsqueeze(1)
                 else:
                     component_sum += critic(observation, eye_batch[:,:,i]) - torch.log(new_chosen_action_probabilities[:,i])
             actor_loss = component_sum.sum().divide(batch_size)
