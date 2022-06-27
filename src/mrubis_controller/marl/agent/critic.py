@@ -97,7 +97,7 @@ class LinearConcatCritic(Module):
         observation = observation.divide(observation.max())
         input_tensor = torch.cat((observation, actions), dim=cat_dim)
         output = self.linear(input_tensor)
-        return torch.softmax(output, dim=1 if len(output.shape) > 1 else 0)
+        return output #torch.softmax(output, dim=1 if len(output.shape) > 1 else 0)
 
     def clone(self):
         return LinearConcatCritic(self.observation_length, self.action_length)

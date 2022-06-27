@@ -92,7 +92,7 @@ class ShopAgentController:
                 continue
             observation, action, selected_action, reward, next_observation = self.replay_buffers[shop].get_batch(batch_size)
             # One hot encode previously chosen action:
-            one_hot_actions: torch.Tensor = F.one_hot(next_actions_tensor, num_classes=self.num_components)
+            one_hot_actions: torch.Tensor = F.one_hot(selected_action, num_classes=self.num_components)
             critic = self.critics[shop]
             actor = self.actors[shop]
             critic_optimizer = self.critic_optimizers[shop]
@@ -104,7 +104,7 @@ class ShopAgentController:
             # Index of sampled action to take using probabilties from above e.g. [1]
             selected_action_indices = Components.index_of_tensor(next_actions_tensor)
             # One hot encode sampled actions e.g. [0, 1, 0]
-            one_hot_sampled_actions: torch.Tensor = F.one_hot(next_actions_tensor, num_classes=self.num_components)
+            one_hot_sampled_actions: torch.Tensor = F.one_hot(selected_action_indices.squeeze(1), num_classes=self.num_components)
             # Probability of chosen action e.g. [0.5]
             selected_actions_probability = torch.take_along_dim(next_actions_tensor, selected_action_indices, dim=1)
             # DDPG Y
@@ -121,14 +121,23 @@ class ShopAgentController:
             # Index of sampled action to take using probabilties from above e.g. [1]
             chosen_action_indices = Components.index_of_tensor(new_chosen_action_probabilities) # batch of indices of actions
             # One hot encode sampled actions e.g. [0, 1, 0]
-            one_hot_sampled_actions: torch.Tensor = F.one_hot(next_actions_tensor, num_classes=self.num_components)
+            one_hot_sampled_actions: torch.Tensor = F.one_hot(chosen_action_indices.squeeze(1), num_classes=self.num_components)
             # Probability of chosen action e.g. [0.5]
             probability_of_selected_actions = torch.take(new_chosen_action_probabilities, chosen_action_indices) # batch of probability of chosen action
             # TODO What we want is to maximize the probability of the action which leads the highest value given by the critic
             # minimize: - sum over actions( probablity of action_i * critic(observation, action_i))
-            # loss = torch.tensor([0])
-            # for i in range(self.num_components):
-            actor_loss: torch.Tensor = (critic(observation, one_hot_sampled_actions) - self.alpha_rb * torch.log(probability_of_selected_actions)).sum().divide(batch_size)
+            component_sum = torch.zeros(observation.shape[0])
+            eye = torch.eye(self.num_components)
+            eye_batch = eye.repeat([observation.shape[0], 1, 1])
+            operation = "mult"
+            for i in range(self.num_components):
+                if operation == "mult":
+                    component_sum -= critic(observation, eye_batch[:,:,i]) * torch.log(new_chosen_action_probabilities[:,i])
+                else:
+                    component_sum += critic(observation, eye_batch[:,:,i]) - torch.log(new_chosen_action_probabilities[:,i])
+            actor_loss = component_sum.sum().divide(batch_size)
+
+            #actor_loss: torch.Tensor = (critic(observation, one_hot_sampled_actions) - self.alpha_rb * torch.log(probability_of_selected_actions)).sum().divide(batch_size)
             actor_loss.backward()
             actor_optimizer.step()
             wandb.log({
