@@ -12,6 +12,8 @@ from marl.agent.critic import EmbeddingCritic, LinearConcatCritic, WeightedEmbed
 from marl.mrubis_data_helper import has_shop_remaining_issues
 from marl.replay_buffer import ReplayBuffer
 
+import torch.nn.functional as F
+
 class ShopAgentController:
     advantage_loss = True
     def __init__(
@@ -21,6 +23,7 @@ class ShopAgentController:
         shops: Iterable[str],
     ):
         self.shops = list(shops)
+        self.num_components = 18
         self.actors = {shop: actor.clone() for shop in shops}
         self.critics = {shop: critic.clone() for shop in shops}
         self.actor_optimizers = {shop: torch.optim.SGD(self.actors[shop].parameters(), lr=1e-4) for shop in shops}
@@ -59,7 +62,7 @@ class ShopAgentController:
             )
         return actions
 
-    def learn(self, action: dict[Shop, RawAction], reward: Reward, next_observation: SystemObservation):
+    def learn(self, action: Dict[Shop, RawAction], reward: Reward, next_observation: SystemObservation):
         for shop_name, raw_action in action.items():
             reward_tensor = torch.tensor(reward[shop_name])
             next_observation_tensor = next_observation.shops[shop_name].encode_to_tensor()
@@ -88,28 +91,44 @@ class ShopAgentController:
             if not self.visited_shop[self.shops.index(shop)]:
                 continue
             observation, action, selected_action, reward, next_observation = self.replay_buffers[shop].get_batch(batch_size)
+            # One hot encode previously chosen action:
+            one_hot_actions: torch.Tensor = F.one_hot(next_actions_tensor, num_classes=self.num_components)
             critic = self.critics[shop]
             actor = self.actors[shop]
             critic_optimizer = self.critic_optimizers[shop]
             actor_optimizer = self.actor_optimizers[shop]
             critic_optimizer.zero_grad()
             actor_optimizer.zero_grad()
+            # Tensor of probability per component e.g. [0.1, 0.5, 0.4]
             next_actions_tensor = actor(next_observation).detach()
+            # Index of sampled action to take using probabilties from above e.g. [1]
             selected_action_indices = Components.index_of_tensor(next_actions_tensor)
+            # One hot encode sampled actions e.g. [0, 1, 0]
+            one_hot_sampled_actions: torch.Tensor = F.one_hot(next_actions_tensor, num_classes=self.num_components)
+            # Probability of chosen action e.g. [0.5]
             selected_actions_probability = torch.take_along_dim(next_actions_tensor, selected_action_indices, dim=1)
             # DDPG Y
             # y = reward + self.gamma * critic(next_observation, next_actions_tensor)
             # SAC Y
-            y = reward + self.gamma * (critic(next_observation, next_actions_tensor) - self.alpha_rb * torch.log(selected_actions_probability))
+            y = reward + self.gamma * (critic(next_observation, one_hot_sampled_actions) - self.alpha_rb * torch.log(selected_actions_probability))
             # Update Q
-            critic_loss = torch.pow((critic(observation, action) - y), 2).sum().divide(batch_size)
+            critic_loss = torch.pow((critic(observation, one_hot_actions) - y), 2).sum().divide(batch_size)
             critic_loss.backward()
             critic_optimizer.step()
             # Update π
+            # Tensor of probability per component e.g. [0.1, 0.5, 0.4]
             new_chosen_action_probabilities: torch.Tensor = actor(observation) # batch of probability distributions
+            # Index of sampled action to take using probabilties from above e.g. [1]
             chosen_action_indices = Components.index_of_tensor(new_chosen_action_probabilities) # batch of indices of actions
+            # One hot encode sampled actions e.g. [0, 1, 0]
+            one_hot_sampled_actions: torch.Tensor = F.one_hot(next_actions_tensor, num_classes=self.num_components)
+            # Probability of chosen action e.g. [0.5]
             probability_of_selected_actions = torch.take(new_chosen_action_probabilities, chosen_action_indices) # batch of probability of chosen action
-            actor_loss: torch.Tensor = (critic(observation, action) - self.alpha_rb * torch.log(probability_of_selected_actions)).sum().divide(batch_size)
+            # TODO What we want is to maximize the probability of the action which leads the highest value given by the critic
+            # minimize: - sum over actions( probablity of action_i * critic(observation, action_i))
+            # loss = torch.tensor([0])
+            # for i in range(self.num_components):
+            actor_loss: torch.Tensor = (critic(observation, one_hot_sampled_actions) - self.alpha_rb * torch.log(probability_of_selected_actions)).sum().divide(batch_size)
             actor_loss.backward()
             actor_optimizer.step()
             wandb.log({
@@ -117,41 +136,41 @@ class ShopAgentController:
                 f"{shop} actor_loss": actor_loss.item()
             })
     
-    def learn_from_replaybuffer(self, batch_size: int = 1):
-        for shop in self.shops:
-            if not self.visited_shop[self.shops.index(shop)]:
-                continue
-            observation, action, selected_action, reward, next_observation = self.replay_buffers[shop].get_batch(batch_size)
-            critic = self.critics[shop]
-            actor = self.actors[shop]
-            critic_optimizer = self.critic_optimizers[shop]
-            actor_optimizer = self.actor_optimizers[shop]
-            critic_optimizer.zero_grad()
-            actor_optimizer.zero_grad()
-            next_actions_tensor = actor(next_observation).detach()
-            selected_action_indices = Components.index_of_tensor(next_actions_tensor)
-            selected_actions_probability = torch.take_along_dim(next_actions_tensor, selected_action_indices, dim=1)
-            # DDPG Y
-            y = reward + self.gamma * critic(next_observation, next_actions_tensor)
-            # SAC Y
-            # y = reward + self.gamma * (critic(next_observation, next_actions_tensor) - self.alpha_rb * torch.log(selected_actions_probability))
-            # Update Q
-            critic_loss = torch.pow((critic(observation, action) - y), 2).sum().divide(batch_size)
-            critic_loss.backward()
-            critic_optimizer.step()
-            # Update π
-            new_chosen_action_probabilities: torch.Tensor = actor(observation) # batch of probability distributions
-            chosen_action_indices = Components.index_of_tensor(new_chosen_action_probabilities) # batch of indices of actions
-            probability_of_selected_actions = torch.take(new_chosen_action_probabilities, chosen_action_indices) # batch of probability of chosen action
-            actor_loss: torch.Tensor = (critic(observation, action) - self.alpha_rb * torch.log(probability_of_selected_actions)).sum().divide(batch_size)
-            actor_loss.backward()
-            actor_optimizer.step()
-            wandb.log({
-                f"{shop} critic_loss": critic_loss.item(),
-                f"{shop} actor_loss": actor_loss.item()
-            })
+    # def learn_from_replaybuffer(self, batch_size: int = 1):
+    #     for shop in self.shops:
+    #         if not self.visited_shop[self.shops.index(shop)]:
+    #             continue
+    #         observation, action, selected_action, reward, next_observation = self.replay_buffers[shop].get_batch(batch_size)
+    #         critic = self.critics[shop]
+    #         actor = self.actors[shop]
+    #         critic_optimizer = self.critic_optimizers[shop]
+    #         actor_optimizer = self.actor_optimizers[shop]
+    #         critic_optimizer.zero_grad()
+    #         actor_optimizer.zero_grad()
+    #         next_actions_tensor = actor(next_observation).detach()
+    #         selected_action_indices = Components.index_of_tensor(next_actions_tensor)
+    #         selected_actions_probability = torch.take_along_dim(next_actions_tensor, selected_action_indices, dim=1)
+    #         # DDPG Y
+    #         y = reward + self.gamma * critic(next_observation, next_actions_tensor)
+    #         # SAC Y
+    #         # y = reward + self.gamma * (critic(next_observation, next_actions_tensor) - self.alpha_rb * torch.log(selected_actions_probability))
+    #         # Update Q
+    #         critic_loss = torch.pow((critic(observation, action) - y), 2).sum().divide(batch_size)
+    #         critic_loss.backward()
+    #         critic_optimizer.step()
+    #         # Update π
+    #         new_chosen_action_probabilities: torch.Tensor = actor(observation) # batch of probability distributions
+    #         chosen_action_indices = Components.index_of_tensor(new_chosen_action_probabilities) # batch of indices of actions
+    #         probability_of_selected_actions = torch.take(new_chosen_action_probabilities, chosen_action_indices) # batch of probability of chosen action
+    #         actor_loss: torch.Tensor = (critic(observation, action) - self.alpha_rb * torch.log(probability_of_selected_actions)).sum().divide(batch_size)
+    #         actor_loss.backward()
+    #         actor_optimizer.step()
+    #         wandb.log({
+    #             f"{shop} critic_loss": critic_loss.item(),
+    #             f"{shop} actor_loss": actor_loss.item()
+    #         })
 
-    def add_to_replaybuffer(self, action: dict[Shop, RawAction], reward: Reward, next_observation: SystemObservation):
+    def add_to_replaybuffer(self, action: Dict[Shop, RawAction], reward: Reward, next_observation: SystemObservation):
         for shop_name, raw_action in action.items():
             self.visited_shop[self.shops.index(shop_name)] = True
             reward_tensor = torch.tensor(reward[shop_name])
