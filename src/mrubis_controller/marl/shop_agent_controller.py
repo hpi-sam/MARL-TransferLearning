@@ -36,12 +36,16 @@ class ShopAgentController:
         self.alpha_rb = 0.2
 
         self.visited_shop = np.zeros(len(shops), dtype=np.bool_)
+        self.sampled_actions: Dict[Shop, 'list[int]'] = {}
 
     def reset_optimizers(self):
         for optimizer in self.actor_optimizers.values():
             optimizer.zero_grad()
         for optimizer in self.actor_optimizers.values():
             optimizer.zero_grad()
+
+    def reset_sampled_actions(self):
+        self.sampled_actions = {}
 
     def choose_actions(self, observations: SystemObservation) -> Dict[Shop, RawAction]:
         actions = {}
@@ -53,6 +57,15 @@ class ShopAgentController:
             action_tensor = self.actors[shop_name](encoded_observation)
             expected_utility = self.critics[shop_name](encoded_observation, action_tensor.detach())
             action, component_index = Components.from_tensor(action_tensor)
+            
+            # Only sample actions that have not been tryed out so far yet, since this never makes sense
+            if shop_name in self.sampled_actions.keys():
+                while component_index in self.sampled_actions[shop_name]:
+                    action, component_index = Components.from_tensor(action_tensor)
+                self.sampled_actions[shop_name].append(component_index)
+            else:
+                self.sampled_actions[shop_name] = [component_index]
+
             actions[shop_name] = RawAction(
                 action=Action(shop_name, action, expected_utility.item()),
                 action_tensor=action_tensor,
