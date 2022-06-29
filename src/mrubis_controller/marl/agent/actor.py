@@ -2,12 +2,14 @@ from torch.nn import Module
 import torch.nn as nn
 import torch
 
+
 class Actor(Module):
     def __init__(self, observation_length=18, action_length=18) -> None:
         super().__init__()
-    
+
     def clone(self):
         raise NotImplementedError()
+
 
 class LSTMActor(Module):
     def __init__(self, input_size, hidden_size, num_layers, num_actions):
@@ -16,7 +18,8 @@ class LSTMActor(Module):
         self.hidden_size = hidden_size
         self.num_layers = num_layers
         self.num_actions = num_actions
-        self.lstm = nn.LSTM(input_size, hidden_size, num_layers, batch_first=True)
+        self.lstm = nn.LSTM(input_size, hidden_size,
+                            num_layers, batch_first=True)
 
     def forward(self, inputs, hidden):
         """
@@ -35,17 +38,19 @@ class LSTMActor(Module):
         """
         output, hidden = self.forward(observations, hidden)
         return output, hidden
-    
+
     def clone(self):
         return LSTMActor(self.input_size, self.hidden_size, self.num_layers, self.num_actions)
 
+
 class LinearActor(Actor):
-    def __init__(self, observation_length=270, action_length=18, activation=torch.nn.Tanh, dimensions=[156,100,50]):
-        super(LinearActor, self).__init__(observation_length=18, action_length=18)
-        self.observation_length=observation_length
-        self.action_length=action_length
-        self.activation=activation
-        self.dimensions=dimensions
+    def __init__(self, observation_length=270, action_length=18, activation=torch.nn.Tanh, dimensions=[156, 100, 50]):
+        super(LinearActor, self).__init__(
+            observation_length=18, action_length=18)
+        self.observation_length = observation_length
+        self.action_length = action_length
+        self.activation = activation
+        self.dimensions = dimensions
         layers = []
         for i in range(len(dimensions)):
             if i == 0:
@@ -54,7 +59,8 @@ class LinearActor(Actor):
                 layers.append(nn.Linear(dimensions[i-1], dimensions[i]))
             if activation is not None:
                 layers.append(activation())
-        layers.append(nn.Linear(dimensions[-1] if len(dimensions) > 0 else observation_length, action_length))
+        layers.append(nn.Linear(
+            dimensions[-1] if len(dimensions) > 0 else observation_length, action_length))
         self.model = nn.Sequential(*layers)
 
     def forward(self, observations: torch.Tensor):

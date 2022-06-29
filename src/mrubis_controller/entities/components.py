@@ -40,6 +40,11 @@ class Components(str, enum.Enum):
         return Components.list()[index], index
 
     @classmethod
+    def max_from_tensor(self, tensor: torch.Tensor) -> 'Components':
+        index = tensor.argmax().item()
+        return Components.list()[index], index
+
+    @classmethod
     def index_of_tensor(self, tensor: torch.Tensor) -> torch.IntTensor:
         return torch.IntTensor([np.random.choice(tensor.size(
             0), 1, p=ten.detach().numpy()).item() for ten in tensor])

@@ -5,10 +5,11 @@ from marl.replay_buffer import ReplayBuffer
 from marl.shop_agent_controller import ShopAgentController
 import alive_progress as ap
 
+
 class Runner:
     def __init__(self, env: MrubisEnv, agent_controller: ShopAgentController):
         self.env = env
-        self.agent_controller = agent_controller # TODO create agent controller
+        self.agent_controller = agent_controller  # TODO create agent controller
 
     def reset(self):
         """ reset all variables and init env """
@@ -31,16 +32,22 @@ class Runner:
                     bar()
                     bar.text = f"Episode: {episode} Step: {step}"
                     step += 1
-                    actions = self.agent_controller.choose_actions(current_observations)
+                    actions = self.agent_controller.choose_actions(
+                        current_observations)
                     # for action in actions.values():
                     #     print(action.action_tensor.max().item(), action.action_tensor.argmax().item(), end=' ')
                     # print()
                     # exit()
-                    valid_actions = filter(lambda x: has_shop_remaining_issues(current_observations, x.action.shop), list(actions.values()))
-                    sendable_actions = list(map(lambda x: x.action.to_sendable_json(), valid_actions))
-                    sendable_actions = {i: e for i, e in enumerate(sendable_actions)}
-                    reward, next_observations, terminated, env_info = self.env.step(sendable_actions)
-                    self.agent_controller.learn(actions, reward, next_observations)
+                    valid_actions = filter(lambda x: has_shop_remaining_issues(
+                        current_observations, x.action.shop), list(actions.values()))
+                    sendable_actions = list(
+                        map(lambda x: x.action.to_sendable_json(), valid_actions))
+                    sendable_actions = {i: e for i,
+                                        e in enumerate(sendable_actions)}
+                    reward, next_observations, terminated, env_info = self.env.step(
+                        sendable_actions)
+                    self.agent_controller.learn(
+                        actions, reward, current_observations, next_observations)
                     current_observations = next_observations
                     if terminated:
                         for shop, count in env_info['stats'].items():
@@ -51,10 +58,11 @@ class Runner:
 
                 print(f"episode {episode} done")
 
+
 class ReplayBufferRunner:
     def __init__(self, env: MrubisEnv, agent_controller: ShopAgentController):
         self.env = env
-        self.agent_controller = agent_controller # TODO create agent controller
+        self.agent_controller = agent_controller  # TODO create agent controller
 
     def reset(self):
         """ reset all variables and init env """
@@ -77,16 +85,22 @@ class ReplayBufferRunner:
                     bar()
                     bar.text = f"Episode: {episode} Step: {step}"
                     step += 1
-                    actions = self.agent_controller.choose_actions(current_observations)
+                    actions = self.agent_controller.choose_actions(
+                        current_observations)
                     # for action in actions.values():
                     #     print(action.action_tensor.max().item(), action.action_tensor.argmax().item(), end=' ')
                     # print()
                     # exit()
-                    valid_actions = filter(lambda x: has_shop_remaining_issues(current_observations, x.action.shop), list(actions.values()))
-                    sendable_actions = list(map(lambda x: x.action.to_sendable_json(), valid_actions))
-                    sendable_actions = {i: e for i, e in enumerate(sendable_actions)}
-                    reward, next_observations, terminated, env_info = self.env.step(sendable_actions)
-                    self.agent_controller.learn(actions, reward, next_observations)
+                    valid_actions = filter(lambda x: has_shop_remaining_issues(
+                        current_observations, x.action.shop), list(actions.values()))
+                    sendable_actions = list(
+                        map(lambda x: x.action.to_sendable_json(), valid_actions))
+                    sendable_actions = {i: e for i,
+                                        e in enumerate(sendable_actions)}
+                    reward, next_observations, terminated, env_info = self.env.step(
+                        sendable_actions)
+                    self.agent_controller.learn(
+                        actions, reward, next_observations)
                     self.agent_controller.learn_from_replaybuffer(10)
                     current_observations = next_observations
                     if terminated:
