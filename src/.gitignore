@@ -6,7 +6,7 @@ mrubis_controller/path.json
 bin/
 /mRUBiS/ML_based_Control/log.txt
 /mrubis_controller/output/
-
+*.pb
 tabularplots/
 gym-results/
 
