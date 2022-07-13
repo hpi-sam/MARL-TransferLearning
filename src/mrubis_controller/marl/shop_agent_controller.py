@@ -11,7 +11,6 @@ from entities.shop import Shop
 from marl.agent.actor import LSTMActor, LinearActor
 from marl.agent.actor_critic import ActorCritic
 from marl.agent.critic import EmbeddingCritic, LinearCritic, WeightedEmbeddingCritic
-from marl.agent.sac import MLPActorCritic
 from marl.mrubis_data_helper import has_shop_remaining_issues
 from marl.replay_buffer import ReplayBuffer
 

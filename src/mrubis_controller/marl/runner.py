@@ -102,7 +102,7 @@ class ReplayBufferRunner:
                     if terminated:
                         for shop, count in env_info['stats'].items():
                             print(f"{shop} fixed after: {count}")
-                            self.agent_controller.reset_sampled_actions()
+                            self.agent_controller.reset_shield()
                             if count != -1:
                                 wandb.log({f"{shop}_fixed": count}, step=step)
                 print(f"episode {episode} done")
