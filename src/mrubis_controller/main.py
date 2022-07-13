@@ -49,7 +49,7 @@ def main():
         num_shops = 10
         env = MrubisEnv(
             episodes=episodes,
-            negative_reward=-1,
+            negative_reward=0,
             propagation_probability=0.5,
             shops=num_shops,
             injection_mean=5,

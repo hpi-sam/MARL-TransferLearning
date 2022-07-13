@@ -9,6 +9,7 @@ from entities.shop import Shop
 
 from marl.agent.actor import LSTMActor, LinearActor
 from marl.agent.critic import EmbeddingCritic, LinearConcatCritic, WeightedEmbeddingCritic
+from marl.agent.sac import MLPActorCritic
 from marl.mrubis_data_helper import has_shop_remaining_issues
 from marl.replay_buffer import ReplayBuffer
 
@@ -193,6 +194,44 @@ class ShopAgentController:
     #         })
 
     def add_to_replaybuffer(self, action: Dict[Shop, RawAction], reward: Reward, next_observation: SystemObservation):
+        for shop_name, raw_action in action.items():
+            self.visited_shop[self.shops.index(shop_name)] = True
+            reward_tensor = torch.tensor(reward[shop_name])
+            next_observation_tensor = next_observation.shops[shop_name].encode_to_tensor()
+            self.replay_buffers[shop_name].add(
+                raw_action.observation_tensor.detach(),
+                raw_action.action_tensor.detach(),
+                torch.tensor(raw_action.action_index).detach(),
+                reward_tensor.detach(),
+                next_observation_tensor.detach()
+            )
+
+
+class MultiSoftActorCritic(ShopAgentController):
+    def __init__(self, shops):
+        self.replay_buffers = { shop: ReplayBuffer() for shop in shops }
+        self.actors = { shop: MLPActorCritic() for shop in shops }
+
+    def choose_actions(self, observations: SystemObservation) -> Dict[Shop, RawAction]:
+        with torch.no_grad():
+            actions = {}
+            for shop_name, shop_observation in observations.shops.items():
+                if not has_shop_remaining_issues(observations, shop_name):
+                    continue
+                encoded_observation = shop_observation.encode_to_tensor()
+                action_tensor = torch.as_tensor(self.actors[shop_name].act(encoded_observation))
+                expected_utility = min(self.actors[shop_name].q1(encoded_observation, action_tensor.detach()), self.actors[shop_name].q2(encoded_observation, action_tensor.detach()))
+                action, component_index = Components.from_tensor(action_tensor)
+                actions[shop_name] = RawAction(
+                    action=Action(shop_name, action, expected_utility.item()),
+                    action_tensor=action_tensor,
+                    expected_utility_tensor=expected_utility,
+                    action_index=component_index,
+                    observation_tensor=encoded_observation
+                )
+            return actions
+
+    def add_to_replaybuffer(self, action: dict[Shop, RawAction], reward: Reward, next_observation: SystemObservation):
         for shop_name, raw_action in action.items():
             self.visited_shop[self.shops.index(shop_name)] = True
             reward_tensor = torch.tensor(reward[shop_name])
