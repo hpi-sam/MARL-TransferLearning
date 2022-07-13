@@ -80,24 +80,21 @@ class WeightedEmbeddingCritic(Module):
     def clone(self):
         return WeightedEmbeddingCritic(self.observation_length, self.action_length, self.embedding_dim)
 
-class LinearConcatCritic(Module):
-    def __init__(self, observation_length=270, action_length=18) -> None:
+class LinearCritic(Module):
+    def __init__(self, observation_length=270, action_length=18, normalize_input=True) -> None:
         super().__init__()
         self.observation_length = observation_length
-        self.action_length = action_length
-        self.linear = nn.Linear(observation_length + action_length, 1)
+        self.linear = nn.Sequential(nn.Linear(observation_length, 128), nn.Tanh(), nn.Linear(128, action_length))
+        self.normalize_input = normalize_input
 
-    def forward(self, observation: torch.Tensor, actions: torch.Tensor) -> torch.Tensor:
+    def forward(self, observation: torch.Tensor) -> torch.Tensor:
         """
         observation: (batch_size, components)
-        actions: (batch_size, components)
         """
-        cat_dim = 0 if observation.dim() == 1 else 1
-        observation = observation.subtract(observation.min())
-        observation = observation.divide(observation.max())
-        input_tensor = torch.cat((observation, actions), dim=cat_dim)
-        output = self.linear(input_tensor)
-        return output #torch.softmax(output, dim=1 if len(output.shape) > 1 else 0)
+        if self.normalize_input:
+            observation = observation.subtract(observation.min())
+            observation = observation.divide(observation.max())
+        return self.linear(observation)
 
     def clone(self):
-        return LinearConcatCritic(self.observation_length, self.action_length)
+        return LinearCritic(self.observation_length, self.action_length)

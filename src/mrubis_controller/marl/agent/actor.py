@@ -1,6 +1,7 @@
 from torch.nn import Module
 import torch.nn as nn
 import torch
+from torch.distributions import Categorical
 
 class Actor(Module):
     def __init__(self, observation_length=18, action_length=18) -> None:
@@ -40,7 +41,7 @@ class LSTMActor(Module):
         return LSTMActor(self.input_size, self.hidden_size, self.num_layers, self.num_actions)
 
 class LinearActor(Actor):
-    def __init__(self, observation_length=270, action_length=18, activation=torch.nn.Tanh, dimensions=[156,100,50]):
+    def __init__(self, observation_length=270, action_length=18, activation=torch.nn.Tanh, dimensions=[128]):
         super(LinearActor, self).__init__(observation_length=18, action_length=18)
         self.observation_length=observation_length
         self.action_length=action_length
@@ -56,15 +57,28 @@ class LinearActor(Actor):
                 layers.append(activation())
         layers.append(nn.Linear(dimensions[-1] if len(dimensions) > 0 else observation_length, action_length))
         self.model = nn.Sequential(*layers)
+        self.sampled_actions = []
 
-    def forward(self, observations: torch.Tensor):
+    def reset_shield(self):
+        self.sampled_actions.clear()
+
+    def forward(self, observations: torch.Tensor, with_shield = False, allowed_actions=None):
         """
         observations: (batch_size, observation_length)
         """
         observations -= observations.min()
         observations /= observations.max()
         output = self.model(observations)
-        return torch.softmax(output, dim=1 if len(output.shape) > 1 else 0)
+        p = torch.softmax(output, dim=1 if len(output.shape) > 1 else 0) + 0.01
+        p /= torch.sum(p, dim=(0))
+        p_log = torch.log(p + (p == 0 * 1e-8))
+        a = Categorical(p).sample()
+        if with_shield:
+            while a.item() in self.sampled_actions or (a.item() not in allowed_actions if allowed_actions is not None else True):
+                a = Categorical(p).sample()
+            self.sampled_actions.append(a.item())
+        return a.unsqueeze(-1), p, p_log
 
     def clone(self):
         return LinearActor(self.observation_length, self.action_length, self.activation, self.dimensions)
+    

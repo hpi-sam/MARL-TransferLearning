@@ -1,17 +1,12 @@
 import argparse
 import os
-import sys
 from time import sleep
 
 import wandb
-from marl.agent.actor import LinearActor
-from marl.agent.critic import LinearConcatCritic
 from marl.mrubis_env import MrubisEnv
 from marl.runner import ReplayBufferRunner, Runner
-from marl.shop_agent_controller import ShopAgentController
 from marl.master_project.master_baseline_runner import MasterBaselineRunner
-from marl.master_project.multi_agent_controller import MultiAgentController
-
+from marl.shop_agent_controller import NewActorCritic
 
 class MrubisStarter:
     def __init__(self):
@@ -59,9 +54,7 @@ def main():
             send_root_issue=True,
             reward_variance=0)
         shops = {f'mRUBiS #{i+1}' for i in range(num_shops)}
-        actor = LinearActor()
-        critic = LinearConcatCritic()
-        agent_controller = ShopAgentController(actor, critic, shops)
+        agent_controller = NewActorCritic(shops)
         if args.runner_rp:
             ReplayBufferRunner(env, agent_controller).run(episodes)
         elif args.runner:

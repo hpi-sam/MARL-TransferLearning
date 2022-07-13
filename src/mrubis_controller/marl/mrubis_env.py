@@ -90,14 +90,19 @@ class MrubisEnv(gym.Env):
         _reward: Reward = self._get_reward(self.observation)[0]
 
         for shop in _reward:
-            clamp = True
+            if _reward[shop] == 0:
+                _reward[shop] = -10
             if _reward[shop] > 0:
-                _reward[shop] = 17
                 self.stats[shop] = self.inner_t
-                clamp = False
-            _reward[shop] += self.reward_variance * normal()
-            if clamp:
-                _reward[shop] = min(0, _reward[shop])
+            if False:
+                clamp = True
+                if _reward[shop] > 0:
+                    _reward[shop] = 17
+                    self.stats[shop] = self.inner_t
+                    clamp = False
+                _reward[shop] += self.reward_variance * normal()
+                if clamp:
+                    _reward[shop] = min(0, _reward[shop])
 
         info = self._info()
         if actions is None or self._is_fixed():

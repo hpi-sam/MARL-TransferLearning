@@ -90,7 +90,7 @@ class ShopObservation:
         )
 
     def encode_to_tensor(self) -> torch.Tensor:
-        return torch.concat([component.encode_to_tensor() for component in self.components.values()])
+        return torch.concat([component.encode_to_tensor() for  _, component in sorted(list(self.components.items()), key=lambda x: x[0])])
 
 
 @dataclass
