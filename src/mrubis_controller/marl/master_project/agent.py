@@ -1,16 +1,13 @@
 # follows https://dev.to/jemaloqiu/reinforcement-learning-with-tf2-and-gym-actor-critic-3go5
 import numpy
 import numpy as np
-import tensorflow as tf
-from keras import backend as K
-from keras.layers import Dense, Input
-from keras.models import Model
-from keras.optimizers import Adam
+import torch
 
 from marl.master_project.helper import get_current_time
 from marl.master_project.sorting.agent_action_sorter import AgentActionSorter
 from entities.component_failure import ComponentFailure
 from entities.observation import ComponentObservation, ShopObservation, SystemObservation
+from marl.master_project.actor_critic import A2CNet
 
 
 def _decoded_action(action, observation):
@@ -53,9 +50,6 @@ class Agent:
         self.base_model_dir = './mrubis_controller/marl/data/models'
         self.base_log_dir = './mrubis_controller/marl/data/logs/'
         self.start_time = get_current_time()
-        self.tb_callback = tf.keras.callbacks.TensorBoard(
-            log_dir=f"{self.base_log_dir}/{self.start_time}/agent_{self.index}_critic",
-            histogram_freq=1)
 
         self.load_models_data = load_models_data
         self.ridge_regression_train_data_path = ridge_regression_train_data_path
@@ -67,9 +61,19 @@ class Agent:
         self.n_actions = len(action_space_inverted)
         self.input_dims = self.n_actions
         self.layer_dims = [36, 72] if layer_dims is None else layer_dims
-        self.optimizer = tf.keras.optimizers.Adam(learning_rate=self.alpha)
+        # self.optimizer = tf.keras.optimizers.Adam(learning_rate=self.alpha)
 
-        self.actor, self.critic, self.policy = self._build_network()
+        # self.actor, self.critic, self.policy = self._build_network()
+        self.model = A2CNet(self.n_actions, self.alpha,
+                            self.beta, self.layer_dims)
+        """
+        self.optimizer = torch.optim.Adam(  # !Delete perspektivisch
+            self.actor.parameters(), lr=self.alpha)  # use parameters from actor or critic??? sollte eher actor sein
+        self.actor_optimizer = torch.optim.Adam(
+            self.actor.parameters(), lr=self.alpha)  # use parameters from actor or critic??? sollte eher actor sein
+        self.critic_optimizer = torch.optim.Adam(
+            self.critic.parameters(), lr=self.beta)  # use parameters from actor or critic??? sollte eher actor sein
+        """
         self.action_space = list(range(self.n_actions))
 
         # stage 0 = no sorting as a baseline
@@ -93,8 +97,11 @@ class Agent:
         for shop_name, components in observations.items():
             regret = None
             state = encode_observations(components)[np.newaxis, :]
+            state_tensor = torch.from_numpy(state).float()
             if state.sum() > 0:  # skip shops without any failure
-                probabilities = self.policy.predict(state)[0]
+                # probabilities = self.policy.predict(state)[0]
+                probabilities, _ = self.model(state_tensor)
+                probabilities = probabilities.detach().numpy()[0]
                 # if self.train:
                 action, probability = self.choose_from_memory(
                     state, shop_name, components)
@@ -123,7 +130,10 @@ class Agent:
             probability = self.previous_actions[shop_name][action]
             self.previous_actions[shop_name][action] = -1
         else:
-            probabilities = self.policy.predict(state)[0]
+            # probabilities = self.policy.predict(state)[0]
+            state_tensor = torch.from_numpy(state).float()
+            probabilities, _ = self.model(state_tensor)
+            probabilities = probabilities.detach().numpy()[0]
             action = numpy.argmax(probabilities)
             probability = probabilities[action]
             probabilities[action] = 0
@@ -137,15 +147,23 @@ class Agent:
                    for action in actions.values()}
         metrics = []
         for shop_name, action in actions.items():
+            torch.autograd.set_detect_anomaly(True)
             state = encode_observations(states[shop_name])[np.newaxis, :]
             # state_ = encode_observations(states_[shop_name])[np.newaxis, :]
 
-            critic_value = self.critic.predict(state)
+            # critic_value = self.critic.predict(state)  # !Das ist tf
+            state_tensor = torch.from_numpy(state).float()
+
+            y_pred, critic_value = self.model(state_tensor)  # Ist das richtig?
+            critic_value = critic_value.detach().numpy()
+            #critic_value[0][0] = double(critic_value[0][0])
+            #y_pred = y_pred.detach().numpy()[0]
             # critic_value_ = self.critic.predict(state_)
 
             # TODO: How important is the length of an episode? Is there a future reward of a solved state?
             shop_reward = reward[0][shop_name]
             target = np.reshape(shop_reward, (1, 1))
+
             delta = target - critic_value
 
             # TODO reset in chosen_action
@@ -157,20 +175,34 @@ class Agent:
                 1), self.action_space_inverted.index(action)] = 1.0
 
             # , callbacks=[self.tb_callback])
-            critic_history = self.critic.fit(state, target, verbose=0)
+            # critic_history = self.critic.fit(state, target, verbose=0)
+            # calculating loss for the critic
+            loss = torch.nn.MSELoss()
+            #output = loss(state, target)
+            output = loss(torch.tensor(critic_value, requires_grad=True).to(torch.float64),
+                          torch.tensor(target, requires_grad=True))
+            self.model.critic_optimizer.zero_grad()
 
-            with tf.GradientTape() as tape:
-                y_pred = self.actor([state, delta])
-                out = K.clip(y_pred, 1e-8, 1 - 1e-8)
-                log_lik = _actions * K.log(out)
-                actor_loss = K.sum(-log_lik * delta)
-            grads = tape.gradient(actor_loss, self.actor.trainable_variables)
-            if self.train:
-                self.optimizer.apply_gradients(
-                    zip(grads, self.actor.trainable_variables))
+            # calculating loss for the actor
+            # y_pred = self.model.actor([state, delta])
+            out = torch.clip(y_pred, 1e-8, 1 - 1e-8)
+            log_lik = torch.tensor(_actions) * torch.log(out)
+            delta = torch.tensor(delta)
+            actor_loss = torch.sum(-log_lik * delta)
+            # loss = compute_loss(model, x)
+            self.model.actor_optimizer.zero_grad()
+            output.backward()
+            actor_loss.backward()
+            self.model.critic_optimizer.step()
+            self.model.actor_optimizer.step()
+            # das ist das alte
+            # grads = tape.gradient(actor_loss, self.actor.trainable_variables)
+            # if self.train:
+            # self.optimizer.apply_gradients(
+            #    zip(grads, self.actor.trainable_variables))
 
             metrics.append({"actor": float(actor_loss),
-                           "critic": critic_history.history['loss'][0]})
+                           "critic": float(output)})
         return metrics
 
     def get_probabilities_for_observations(self, observations):
@@ -188,38 +220,49 @@ class Agent:
         self.memory[shop_name] = failing_components
         return same_obs
 
+    """
     def _build_network(self):
         if self.load_models_data is not None:
             return self.load_models(self.load_models_data)
-        model_input = Input(shape=(self.input_dims,), name='input')
+        model_input = torch.nn.Linear(self.input_dims,)  # name='input')
         delta = Input(shape=[1], name='delta')
 
         dense_layer = model_input
+        layers = []
         for index, dims in enumerate(self.layer_dims):
-            name = 'layer_' + (str(index) if index !=
-                               len(self.layer_dims) - 1 else 'last')
-            next_dense_layer = Dense(
-                dims, activation='relu', name=name)(dense_layer)
-            dense_layer = next_dense_layer
+            if index == 0:
+                layers.append(torch.nn.Linear(self.input_dims, dims))
+            else:
+                layers.append(torch.nn.Linear(
+                    self.layer_dims[index - 1], dims))
+            layers.append(torch.nn.ReLU())
+        actor_layers = layers
+        actor_layers.append(torch.nn.Linear(
+            self.layer_dims[-1], self.n_actions))
+        actor_layers.append(torch.nn.Softmax())
+        critic_layers = layers
+        critic_layers.append(torch.nn.Linear(self.layer_dims[-1], 1))
+        critic_layers.append(torch.nn.Linear())
+        # values = Dense(1, activation='linear', name='values')(dense_layer)
 
-        probs = Dense(self.n_actions, activation='softmax',
-                      name='probs')(dense_layer)
-        values = Dense(1, activation='linear', name='values')(dense_layer)
-
-        actor = Model(inputs=[model_input, delta], outputs=[probs])
-        critic = Model(inputs=[model_input], outputs=[values])
-        critic.compile(optimizer=Adam(lr=self.beta), loss='mean_squared_error')
+        # actor = Model(inputs=[model_input, delta], outputs=[probs])
+        actor = torch.nn.Sequential(*actor_layers)
+        # critic = Model(inputs=[model_input], outputs=[values])
+        critic = torch.nn.Sequential(*critic_layers)
+        # wie geht das mit dem loss?
+        # critic.compile(optimizer=Adam(lr=self.beta), loss='mean_squared_error')#! Das ist der critic mit loss und lr
 
         policy = Model(inputs=[model_input], outputs=[probs])
 
         return actor, critic, policy
+    """
 
     def save(self, episode):
         self.actor.save(
             f"{self.base_model_dir}/{self.start_time}/agent_{self.index}/actor/episode_{episode}")
         self.critic.save(
             f"{self.base_model_dir}/{self.start_time}/agent_{self.index}/critic/episode_{episode}")
-
+    """
     def load_models(self, load_models_data):
         base_dir = f"{self.base_model_dir}/{load_models_data['start_time']}/agent_{self.index}"
 
@@ -240,6 +283,7 @@ class Agent:
             'input').input], outputs=[probs])
 
         return actor, critic, policy
+    """
 
     def remove_shops(self, shops):
         self.shops = self.shops.difference(shops)

@@ -155,7 +155,7 @@ class RobustnessComponent:
             (don't make the same last mistake), are ranked by a challenge (last observation).
             The challenge is used to rank the agents by the lowest critic loss which should help to find the best agent
             faster. The execution plan is stored inside the calibration_distribution if any agent is left that did pass
-            the pre-checks. Otherwise, the agent has to be retrained as no agent is available to help that agent
+            the pre-ks. Otherwise, the agent has to be retrained as no agent is available to help that agent
         """
         relevant_history = build_replay_buffer(
             agents, failing_agent_index, self.replay_buffer)
