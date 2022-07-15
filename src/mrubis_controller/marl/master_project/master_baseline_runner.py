@@ -21,12 +21,11 @@ class MasterBaselineRunner:
                                  65: None, 66: None, 67: None, 68: None, 69: None,
                                  70: None, 71: None, 72: None, 73: None, 74: None,
                                  75: None, 76: None, 77: None, 78: None, 79: None}
-        self.shop_distribution = [{'mRUBiS #1', 'mRUBiS #2', 'mRUBiS #3', 'mRUBiS #4', 'mRUBiS #5',
-                                   'mRUBiS #6', 'mRUBiS #7', 'mRUBiS #8', 'mRUBiS #9', 'mRUBiS #10'}]
+        # self.shop_distribution =
         self.env = env
 
         self.mac = MultiAgentController(
-            self.shop_distribution, self.load_models_data, robustness_activated)
+            self.load_models_data, robustness_activated)
         self.episode = 0
         self.step = 0
         self.save_model = save_model

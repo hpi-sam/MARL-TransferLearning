@@ -7,9 +7,10 @@ from marl.master_project.robustness_component import RobustnessComponent
 
 
 class MultiAgentController:
-    def __init__(self, shop_distribution, load_models_data, robustness_activated=False):
+    def __init__(self, load_models_data, robustness_activated=False):
         # list of named shops per agent identified by the index
-        self.shop_distribution = shop_distribution
+        self.shop_distribution = [{'mRUBiS #1', 'mRUBiS #2', 'mRUBiS #3', 'mRUBiS #4', 'mRUBiS #5',
+                                   'mRUBiS #6', 'mRUBiS #7', 'mRUBiS #8', 'mRUBiS #9', 'mRUBiS #10'}]
         self.load_models_data = load_models_data
         self.rank_learner = RankLearner(1, None)
         self.agents = None
