@@ -11,6 +11,7 @@ from marl.runner import ReplayBufferRunner, Runner
 from marl.shop_agent_controller import ShopAgentController
 from marl.master_project.master_baseline_runner import MasterBaselineRunner
 from marl.master_project.multi_agent_controller import MultiAgentController
+from marl.agent_new import Agent
 
 
 class MrubisStarter:
@@ -58,14 +59,19 @@ def main():
             trace_length=0,
             send_root_issue=True,
             reward_variance=0)
-        shops = {f'mRUBiS #{i+1}' for i in range(num_shops)}
+        # shops = {f'mRUBiS #{i+1}' for i in range(num_shops)}
+        shops = [['mRUBiS #1', 'mRUBiS #2', 'mRUBiS #3', 'mRUBiS #4', 'mRUBiS #5',
+                  'mRUBiS #6', 'mRUBiS #7', 'mRUBiS #8', 'mRUBiS #9', 'mRUBiS #10']]
         actor = LinearActor()
         critic = LinearConcatCritic()
-        agent_controller = ShopAgentController(actor, critic, shops)
+        #agent_controller = ShopAgentController(actor, critic, shops)
+        agents = [Agent(shop_set, actor.clone(), critic.clone())
+                  for shop_set in shops]
         if args.runner_rp:
-            ReplayBufferRunner(env, agent_controller).run(episodes)
+            ReplayBufferRunner(env, agents).run(episodes)
         elif args.runner:
-            Runner(env, agent_controller).run(episodes)
+            pass
+            #Runner(env, agent_controller).run(episodes)
         elif args.runner_master:
             MasterBaselineRunner(env).run(episodes)
         else:

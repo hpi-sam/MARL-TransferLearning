@@ -1,12 +1,11 @@
 from typing import Dict, Iterable, Union
-import numpy as np
 import torch
 import wandb
 from entities.components import Components
 from entities.observation import Action, RawAction, SystemObservation
 from entities.reward import Reward
 from entities.shop import Shop
-
+import numpy as np
 from marl.agent.actor import LSTMActor, LinearActor
 from marl.agent.critic import EmbeddingCritic, LinearConcatCritic, WeightedEmbeddingCritic
 from marl.mrubis_data_helper import has_shop_remaining_issues
@@ -15,38 +14,32 @@ from marl.replay_buffer import ReplayBuffer
 import torch.nn.functional as F
 
 
-class ShopAgentController:
-    advantage_loss = True
+class Agent():
+    def __init__(self,
+                 shops: Iterable[str],
+                 actor: Union[LSTMActor, LinearActor],
+                 critic: Union[EmbeddingCritic,
+                               WeightedEmbeddingCritic, LinearConcatCritic]
+                 ):
 
-    def __init__(
-        self,
-        actor: Union[LSTMActor, LinearActor],
-        critic: Union[EmbeddingCritic, WeightedEmbeddingCritic, LinearConcatCritic],
-        shops: Iterable[str],
-    ):
-        self.shops = list(shops)
+        self.shops = shops
+        self.actor = actor
         self.num_components = 18
-        self.actors = {shop: actor.clone() for shop in shops}
-        self.critics = {shop: critic.clone() for shop in shops}
-        self.actor_optimizers = {shop: torch.optim.SGD(
-            self.actors[shop].parameters(), lr=1e-4) for shop in shops}
-        self.critic_optimizers = {shop: torch.optim.SGD(
-            self.critics[shop].parameters(), lr=1e-4) for shop in shops}
+        self.critic = critic
+        self.actor_optimizer = torch.optim.SGD(
+            self.critic.parameters(), lr=1e-4)
+        self.critic_optimizer = torch.optim.SGD(
+            self.critic.parameters(), lr=1e-4)
         self.alpha = 0.95
-        self.replay_buffers = {shop: ReplayBuffer() for shop in shops}
-
-        # Replay buffer training hyper parameters
+        self.replay_buffer = ReplayBuffer()
         self.gamma = 0.99
         self.alpha_rb = 0.2
-
         self.visited_shop = np.zeros(len(shops), dtype=np.bool_)
         self.sampled_actions: Dict[Shop, 'list[int]'] = {}
 
     def reset_optimizers(self):
-        for optimizer in self.actor_optimizers.values():
-            optimizer.zero_grad()
-        for optimizer in self.actor_optimizers.values():
-            optimizer.zero_grad()
+        self.actor_optimizer.zero_grad()
+        self.critic_optimizer.zero_grad()
 
     def reset_sampled_actions(self):
         self.sampled_actions = {}
@@ -58,12 +51,13 @@ class ShopAgentController:
             if not has_shop_remaining_issues(observations, shop_name):
                 continue
             encoded_observation = shop_observation.encode_to_tensor()
-            action_tensor = self.actors[shop_name](encoded_observation)
-            expected_utility = self.critics[shop_name](
+            action_tensor = self.actor(encoded_observation)
+            expected_utility = self.critic(
                 encoded_observation, action_tensor.detach())
             action, component_index = Components.from_tensor(action_tensor)
 
             # Only sample actions that have not been tryed out so far yet, since this never makes sense
+            """
             if shop_name in self.sampled_actions.keys():
                 while component_index in self.sampled_actions[shop_name]:
                     action, component_index = Components.from_tensor(
@@ -71,7 +65,7 @@ class ShopAgentController:
                 self.sampled_actions[shop_name].append(component_index)
             else:
                 self.sampled_actions[shop_name] = [component_index]
-
+            """
             actions[shop_name] = RawAction(
                 action=Action(shop_name, action, expected_utility.item()),
                 action_tensor=action_tensor,
@@ -86,16 +80,16 @@ class ShopAgentController:
             reward_tensor = torch.tensor(reward[shop_name])
             next_observation_tensor = next_observation.shops[shop_name].encode_to_tensor(
             )
-            next_action_tensor = self.actors[shop_name](
+            next_action_tensor = self.actor(
                 next_observation_tensor)
-            next_utility_tensor = self.critics[shop_name](
+            next_utility_tensor = self.critic(
                 next_observation_tensor, next_action_tensor.detach())
 
             # critic_loss = torch.pow(reward_tensor + self.alpha * (next_utility_tensor.detach() - raw_action.expected_utility_tensor), 2)
             critic_loss = torch.pow(
                 reward_tensor - raw_action.expected_utility_tensor, 2)
             critic_loss.backward()
-            self.critic_optimizers[shop_name].step()
+            self.critic_optimizer.step()
             # Advantage. Q_t+1 + R - Q_t
             advantage = reward_tensor + 0.99 * next_utility_tensor - \
                 raw_action.expected_utility_tensor
@@ -109,23 +103,23 @@ class ShopAgentController:
                 actor_loss = raw_action.expected_utility_tensor.detach(
                 ) - self.alpha * raw_action.action_tensor[raw_action.action_index].log()
             actor_loss.backward()
-            self.actor_optimizers[shop_name].step()
-            self.replay_buffers[shop_name].add(raw_action.observation_tensor, raw_action.action_tensor, torch.tensor(
+            self.actor_optimizer.step()
+            self.replay_buffer.add(raw_action.observation_tensor, raw_action.action_tensor, torch.tensor(
                 raw_action.action_index), reward_tensor, next_observation_tensor)
 
     def learn_from_replaybuffer(self, batch_size: int = 1):
         for shop in self.shops:
             if not self.visited_shop[self.shops.index(shop)]:
                 continue
-            observation, action, selected_action, reward, next_observation = self.replay_buffers[shop].get_batch(
+            observation, action, selected_action, reward, next_observation = self.replay_buffer.get_batch(
                 batch_size)
             # One hot encode previously chosen action:
             one_hot_actions: torch.Tensor = F.one_hot(
                 selected_action, num_classes=self.num_components)
-            critic = self.critics[shop]
-            actor = self.actors[shop]
-            critic_optimizer = self.critic_optimizers[shop]
-            actor_optimizer = self.actor_optimizers[shop]
+            critic = self.critic
+            actor = self.actor
+            critic_optimizer = self.critic_optimizer
+            actor_optimizer = self.actor_optimizer
             critic_optimizer.zero_grad()
             actor_optimizer.zero_grad()
             # Tensor of probability per component e.g. [0.1, 0.5, 0.4]
@@ -221,11 +215,13 @@ class ShopAgentController:
 
     def add_to_replaybuffer(self, action: Dict[Shop, RawAction], reward: Reward, next_observation: SystemObservation):
         for shop_name, raw_action in action.items():
+            if shop_name not in self.shops:
+                continue
             self.visited_shop[self.shops.index(shop_name)] = True
             reward_tensor = torch.tensor(reward[shop_name])
             next_observation_tensor = next_observation.shops[shop_name].encode_to_tensor(
             )
-            self.replay_buffers[shop_name].add(
+            self.replay_buffer.add(
                 raw_action.observation_tensor.detach(),
                 raw_action.action_tensor.detach(),
                 torch.tensor(raw_action.action_index).detach(),
