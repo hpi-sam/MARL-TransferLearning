@@ -62,7 +62,7 @@ class Agent:
         self.input_dims = self.n_actions
         self.layer_dims = [36, 72] if layer_dims is None else layer_dims
 
-        self.replay_buffer = ReplayBuffer(100)
+        self.replay_buffers = {shop: ReplayBuffer(100) for shop in self.shops}
 
         self.model = A2CNet(self.n_actions, self.alpha,
                             self.beta, self.layer_dims)
@@ -130,8 +130,10 @@ class Agent:
         """ network learns to improve """
         actions = {action['shop']: action['component']
                    for action in actions.values()}
+                   
         metrics = []
-        for shop_name, action in actions.items():
+        for shop_name in self.shops:
+            observations, actions, rewards  = self.replay_buffers[shop_name].get_batch(batch_size)
             torch.autograd.set_detect_anomaly(True)
             state = encode_observations(states[shop_name])[np.newaxis, :]
 
@@ -201,5 +203,8 @@ class Agent:
     def add_shops(self, shops):
         self.shops = self.shops.union(shops)
 
-    def add_to_replay_buffer(self, sample):
-        self.replay_buffer.add(sample)
+    def add_to_replay_buffer(self, states, actions, reward, states_, dones):
+        # ToDo: only add data that is relevant for this agent to the replay_buffer
+        for shop_name, action in actions.items():
+            if shop_name in self.shops:
+                self.replay_buffers[shop_name].add(states[shop_name], action, reward[0][shop_name])
