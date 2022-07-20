@@ -211,7 +211,9 @@ class Agent:
         critic.compile(optimizer=Adam(lr=self.beta), loss='mean_squared_error')
 
         policy = Model(inputs=[model_input], outputs=[probs])
-
+        print(actor.summary())
+        print(critic.summary())
+        print(policy.summary())
         return actor, critic, policy
 
     def save(self, episode):

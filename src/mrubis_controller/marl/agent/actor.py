@@ -1,3 +1,4 @@
+from typing import List
 from torch.nn import Module
 import torch.nn as nn
 import torch
@@ -41,7 +42,7 @@ class LSTMActor(Module):
         return LSTMActor(self.input_size, self.hidden_size, self.num_layers, self.num_actions)
 
 class LinearActor(Actor):
-    def __init__(self, observation_length=270, action_length=18, activation=torch.nn.Tanh, dimensions=[128]):
+    def __init__(self, observation_length=1*18, action_length=18, activation=torch.nn.ReLU, dimensions=[]):
         super(LinearActor, self).__init__(observation_length=18, action_length=18)
         self.observation_length=observation_length
         self.action_length=action_length
@@ -66,15 +67,15 @@ class LinearActor(Actor):
         """
         observations: (batch_size, observation_length)
         """
-        observations -= observations.min()
-        observations /= observations.max()
+        # observations -= observations.min()
+        # observations /= observations.max()
         output = self.model(observations)
         p = torch.softmax(output, dim=1 if len(output.shape) > 1 else 0) + 0.01
         p /= torch.sum(p, dim=(0))
         p_log = torch.log(p + (p == 0 * 1e-8))
         a = Categorical(p).sample()
         if with_shield:
-            while a.item() in self.sampled_actions or (a.item() not in allowed_actions if allowed_actions is not None else True):
+            while a.item() in self.sampled_actions or (a.item() not in allowed_actions if allowed_actions is not None else False):
                 a = Categorical(p).sample()
             self.sampled_actions.append(a.item())
         return a.unsqueeze(-1), p, p_log
@@ -82,3 +83,22 @@ class LinearActor(Actor):
     def clone(self):
         return LinearActor(self.observation_length, self.action_length, self.activation, self.dimensions)
     
+class CombinedActor(Module):
+    def __init__(self, layers: List[Module], last_dim: int):
+        super().__init__()
+        self.model = torch.nn.Sequential(*layers, torch.nn.Linear(last_dim, 18))
+        self.sampled_actions = []
+
+    def reset_shield(self):
+        self.sampled_actions.clear()
+    def forward(self, output, with_shield=False, allowed_actions=None):
+        output = self.model(output)
+        p = torch.softmax(output, dim=1 if len(output.shape) > 1 else 0) + 0.01
+        p /= torch.sum(p, dim=(0))
+        p_log = torch.log(p + (p == 0 * 1e-8))
+        a = Categorical(p).sample()
+        if with_shield:
+            while a.item() in self.sampled_actions or (a.item() not in allowed_actions if allowed_actions is not None else False):
+                a = Categorical(p).sample()
+            self.sampled_actions.append(a.item())
+        return a.unsqueeze(-1), p, p_log

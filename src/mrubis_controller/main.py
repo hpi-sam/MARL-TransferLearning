@@ -8,6 +8,8 @@ from marl.runner import ReplayBufferRunner, Runner
 from marl.master_project.master_baseline_runner import MasterBaselineRunner
 from marl.shop_agent_controller import NewActorCritic
 
+from marl.options import args
+
 class MrubisStarter:
     def __init__(self):
         pass
@@ -23,15 +25,6 @@ class MrubisStarter:
 
 
 def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--runner", action="store_true",
-                        default=False, help="start rl runner with dl")
-    parser.add_argument("--runner-rp", action="store_true", default=False,
-                        help="start rl runner with replay buffer with dl")
-    parser.add_argument("--runner-master", action="store_true", default=False,
-                        help="start rl runner with the baseline of the masters project")
-    parser.add_argument("--wandb", action="store_true", help="Log with wandb")
-    args = parser.parse_args()
     if not (args.runner ^ args.runner_rp ^ args.runner_master):
         raise Exception(
             "Specify exactly one runner type. See main.py -h for help.")

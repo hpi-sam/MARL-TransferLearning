@@ -44,7 +44,8 @@ class ReplayBuffer:
         indices = np.random.choice(
             len(self.observations),
             min(batch_size, len(self.observations)),
-            replace=False
+            replace=False,
+            p=(np.arange(self.observations)+1)/len(self.observations)
         )
         actions = []
         selected_actions = []

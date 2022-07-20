@@ -94,7 +94,7 @@ class MrubisEnv(gym.Env):
                 _reward[shop] = -10
             if _reward[shop] > 0:
                 self.stats[shop] = self.inner_t
-            if False:
+            if True:
                 clamp = True
                 if _reward[shop] > 0:
                     _reward[shop] = 17

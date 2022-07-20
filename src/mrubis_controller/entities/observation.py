@@ -36,6 +36,7 @@ class ComponentObservation:
         )
 
     def encode_to_tensor(self) -> torch.Tensor:
+        return torch.tensor([float(self.failure_name != ComponentFailure.NONE)], dtype=torch.float32)
         return torch.tensor([
             self.component_utility,
             float(self.failure_name.value),
@@ -90,7 +91,8 @@ class ShopObservation:
         )
 
     def encode_to_tensor(self) -> torch.Tensor:
-        return torch.concat([component.encode_to_tensor() for  _, component in sorted(list(self.components.items()), key=lambda x: x[0])])
+        encoded = torch.concat([component.encode_to_tensor() for  _, component in sorted(list(self.components.items()), key=lambda x: x[0])])
+        return encoded
 
 
 @dataclass

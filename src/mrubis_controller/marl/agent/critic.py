@@ -1,4 +1,5 @@
 
+from typing import List
 from torch.nn import Module
 import torch
 import torch.nn as nn
@@ -81,7 +82,7 @@ class WeightedEmbeddingCritic(Module):
         return WeightedEmbeddingCritic(self.observation_length, self.action_length, self.embedding_dim)
 
 class LinearCritic(Module):
-    def __init__(self, observation_length=270, action_length=18, normalize_input=True) -> None:
+    def __init__(self, observation_length=1*18, action_length=18, normalize_input=False) -> None:
         super().__init__()
         self.observation_length = observation_length
         self.linear = nn.Sequential(nn.Linear(observation_length, 128), nn.Tanh(), nn.Linear(128, action_length))
@@ -98,3 +99,11 @@ class LinearCritic(Module):
 
     def clone(self):
         return LinearCritic(self.observation_length, self.action_length)
+
+
+class CombinedCritic(Module):
+    def __init__(self, layers: List[Module], last_dim: int):
+        super().__init__()
+        self.model = torch.nn.Sequential(*layers, torch.nn.Linear(last_dim, 18))
+    def forward(self, X):
+        return self.model(X)
