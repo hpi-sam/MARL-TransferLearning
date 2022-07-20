@@ -126,11 +126,10 @@ class Agent:
         return action, probability
 
     def learn(self, batch_size: int = 1):
-        # first try to iterateively do and check performance
         """ network learns to improve """
         actions = {action['shop']: action['component']
                    for action in actions.values()}
-                   
+
         metrics = []
         for shop_name in self.shops:
             observations, actions, rewards  = self.replay_buffers[shop_name].get_batch(batch_size)
