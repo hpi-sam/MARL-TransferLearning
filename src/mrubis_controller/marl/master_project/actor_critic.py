@@ -9,11 +9,8 @@ class A2CNet(nn.Module):
         self.layer_dims = [36, 72] if layer_dims is None else layer_dims
         self.build_network()
 
-        self.actor_optimizer = torch.optim.Adam(
-            self.actor.parameters(), lr=actor_lr)
-        self.critic_optimizer = torch.optim.Adam(
-            self.critic.parameters(), lr=critic_lr)
-        # self.double()
+        self.actor_optimizer = torch.optim.Adam(self.actor.parameters(), lr=actor_lr)
+        self.critic_optimizer = torch.optim.Adam(self.critic.parameters(), lr=critic_lr)
 
     def forward(self, state):
         policy = self.actor(state)
@@ -21,7 +18,6 @@ class A2CNet(nn.Module):
         return policy, value
 
     def build_network(self):
-        # model_input = nn.Linear(self.input_dims,)  # name='input')
         layers = []
         for index, dims in enumerate(self.layer_dims):
             if index == 0:
@@ -35,11 +31,7 @@ class A2CNet(nn.Module):
         actor_layers.append(torch.nn.Linear(
             self.layer_dims[-1], self.n_actions))
         actor_layers.append(torch.nn.Softmax(dim=1))  # ? Ist dim=1 korrekt?
-        self.actor = torch.nn.Sequential(*actor_layers)
         critic_layers.append(torch.nn.Linear(self.layer_dims[-1], 1))
-        # critic_layers.append(torch.nn.Linear())
-        # actor = Model(inputs=[model_input, delta], outputs=[probs])
-        # critic = Model(inputs=[model_input], outputs=[values])
-        self.critic = torch.nn.Sequential(*critic_layers)
 
-        # policy = Model(inputs=[model_input], outputs=[probs])
+        self.critic = torch.nn.Sequential(*critic_layers)
+        self.actor = torch.nn.Sequential(*actor_layers)

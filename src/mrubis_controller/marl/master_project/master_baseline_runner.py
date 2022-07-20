@@ -51,22 +51,19 @@ class MasterBaselineRunner:
         while self.episode < episodes:
             terminated = False
             observations = self.env.reset()
-            # regrets.append({})
             logs.append([])
             wandb.log({'episode': self.episode},
                       commit=False, step=self.step)
 
             while not terminated:
-                actions, regret, root_cause = self.mac.select_actions(
-                    observations)
-                # if regret is not None:
-                #     regrets.append(regret)
-                reward, observations_, terminated, env_info = self.env.step(
-                    actions)
+                actions, regret, root_cause = self.mac.select_actions(observations)
+                reward, observations_, terminated, env_info = self.env.step(actions)
                 if actions is not None:
                     rewards.append(reward)
-                    metrics.append(self.mac.learn(
-                        observations, actions, reward, observations_, terminated))
+                    # old: self.mac.learn(observations, actions, reward, observations_, terminated)
+                    self.agent_controller.add_to_replay_buffer(observations, actions, reward, observations_, terminated)
+                    res = self.agent_controller.learn(10)
+                    metrics.append(res)
                     for shop in regret[0].keys():
                         wandb.log(
                             {f'Regret_{shop}': regret[0][shop]}, step=self.step)
@@ -78,6 +75,7 @@ class MasterBaselineRunner:
 
                 if terminated:
                     for shop, count in env_info['stats'].items():
+                        print(f"Fixed_{shop}: {count}")
                         if count != -1:
                             wandb.log({f"Fixed_{shop}": count},
                                       step=self.step)
