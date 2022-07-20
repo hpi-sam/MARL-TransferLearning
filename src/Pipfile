@@ -1,0 +1,25 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+jupyter = "*"
+gym = "==0.21.0"
+matplotlib = "*"
+tensorflow = "==2.2.0"
+keras = "==2.4.2"
+pytest = "*"
+mypy = "*"
+pandas = "*"
+sklearn = "*"
+requests = "*"
+
+[dev-packages]
+numpy = {testing = "*"}
+
+[requires]
+python_version = "3.8"
+
+[scripts]
+test = "pytest"

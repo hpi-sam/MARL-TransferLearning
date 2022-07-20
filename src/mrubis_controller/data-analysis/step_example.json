@@ -1,0 +1,13 @@
+# only sorted list of fixes will be send without issues and rules
+{
+  0: {
+    'shop': 'mRUBiS #1',
+    'issue': 'CF3', # removed
+    'component': 'Inventory Service',
+  },
+  1: {
+    'shop': 'mRUBiS #10',
+    'issue': 'CF3', # removed
+    'component': 'Availability Item Filter',
+  },
+}
