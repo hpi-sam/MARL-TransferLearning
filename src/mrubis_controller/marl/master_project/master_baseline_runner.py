@@ -61,8 +61,8 @@ class MasterBaselineRunner:
                 if actions is not None:
                     rewards.append(reward)
                     # old: self.mac.learn(observations, actions, reward, observations_, terminated)
-                    self.agent_controller.add_to_replay_buffer(observations, actions, reward, observations_, terminated)
-                    res = self.agent_controller.learn(10)
+                    self.mac.add_to_replay_buffer(observations, actions, reward, observations_, terminated)
+                    res = self.mac.learn(10)
                     metrics.append(res)
                     for shop in regret[0].keys():
                         wandb.log(

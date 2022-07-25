@@ -3,6 +3,7 @@ from marl.mrubis_data_helper import has_shop_remaining_issues
 from marl.mrubis_env import MrubisEnv
 from marl.shop_agent_controller import ShopAgentController
 import alive_progress as ap
+from marl.options import args
 
 
 class Runner:
@@ -97,7 +98,7 @@ class ReplayBufferRunner:
                         }, step=step)
                     # self.agent_controller.learn(actions, reward, next_observations)
                     self.agent_controller.add_to_replaybuffer(actions, reward, next_observations)
-                    self.agent_controller.learn_from_replaybuffer(20)
+                    self.agent_controller.learn_from_replaybuffer(args.batch_size)
                     current_observations = next_observations
                     if terminated:
                         for shop, count in env_info['stats'].items():
