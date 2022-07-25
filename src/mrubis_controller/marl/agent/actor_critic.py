@@ -1,5 +1,6 @@
 from copy import deepcopy
 from typing import Tuple
+import numpy
 import torch
 import torch.nn.functional as F
 from torch.distributions import Categorical
@@ -24,6 +25,11 @@ class ActorCritic:
 
         self.target_c1 = LinearCritic()
         self.target_c2 = LinearCritic()
+
+        self.target_entropy = -np.log((1.0 / 18)) * 0.98
+        self.log_alpha = torch.zeros(1, requires_grad=True, device=self.device)
+        self.alpha = self.log_alpha.exp()
+        self.alpha_optim = torch.optim.Adam([self.log_alpha], lr=self.hyperparameters["Actor"]["learning_rate"], eps=1e-4)
 
         self.alpha = 0.2
         self.discount_rate = 0.99
@@ -101,12 +107,20 @@ class SimpleActorCritic:
             torch.nn.ReLU(),
         ]
         self.actor = CombinedActor(base_model, 72)
-        self.actor_optimizer = torch.optim.Adam(self.actor.parameters(), 1e-4)
+        self.actor_optimizer = torch.optim.Adam(self.actor.parameters(), lr=1e-4)
         self.critic = CombinedCritic(base_model, 72)
-        self.critic_optimizer = torch.optim.Adam(self.critic.parameters(), 1e-4)
+        self.critic_optimizer = torch.optim.Adam(self.critic.parameters(), lr=1e-4)
         self.target_critic = CombinedCritic(deepcopy(base_model), 72)
 
-        self.alpha = 0.2
+        self.learn_alpha = True
+        if not self.learn_alpha:
+            self.alpha = 0.2
+        else:
+            self.target_entropy = -numpy.log((1.0 / 18)) * 0.98
+            self.log_alpha = torch.nn.parameter.Parameter(torch.zeros(1, requires_grad=True))
+            self.alpha = torch.nn.parameter.Parameter(self.log_alpha.exp())
+            self.alpha_optim = torch.optim.Adam([self.log_alpha], lr=1e-4)
+
         self.discount_rate = 0.99
         self.tau = 0.995
 
@@ -157,6 +171,14 @@ class SimpleActorCritic:
 
         self.actor_optimizer.zero_grad()
         pi_loss.backward()
+        self.actor_optimizer.step()
+
+        if self.learn_alpha:
+            self.alpha_optim.zero_grad()
+            alpha_loss = -(self.log_alpha * (next_action_log_p + self.target_entropy).detach()).mean()
+            alpha_loss.backward()
+            self.alpha_optim.step()
+            self.alpha = self.log_alpha.exp()
 
     def update_target(self, target: torch.nn.Module, follower: torch.nn.Module):
         for target_param, local_param in zip(target.parameters(), follower.parameters()):

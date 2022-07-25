@@ -8,7 +8,7 @@ from marl.master_project.sorting.agent_action_sorter import AgentActionSorter
 from entities.component_failure import ComponentFailure
 from entities.observation import ComponentObservation, ShopObservation, SystemObservation
 from marl.master_project.actor_critic import A2CNet
-from mrubis_controller.marl.master_project.replay_buffer import ReplayBuffer
+from marl.replay_buffer import ReplayBuffer
 
 
 def _decoded_action(action, observation):
@@ -94,7 +94,8 @@ class Agent:
             if state.sum() > 0:  # skip shops without any failure
                 probabilities, _ = self.model(state_tensor)
                 probabilities = probabilities.detach().numpy()[0]
-                action, probability = self.choose_from_memory(state, shop_name, components)
+                action = numpy.argmax(probabilities)
+                probability = probabilities[action]
                 root_cause_index, root_cause_name = get_root_cause(components)
                 regret = 1.0 - probabilities[root_cause_index]
                 decoded_action = _decoded_action(action, observations)
@@ -127,43 +128,24 @@ class Agent:
 
     def learn(self, batch_size: int = 1):
         """ network learns to improve """
-        actions = {action['shop']: action['component']
-                   for action in actions.values()}
-
         metrics = []
         for shop_name in self.shops:
-            observations, actions, rewards  = self.replay_buffers[shop_name].get_batch(batch_size)
+            observations, actions, selected_actions, rewards, next_observations  = self.replay_buffers[shop_name].get_batch(batch_size)
+            if observations is None:
+                continue
             torch.autograd.set_detect_anomaly(True)
-            state = encode_observations(states[shop_name])[np.newaxis, :]
-
-            state_tensor = torch.from_numpy(state).float()
-
-            y_pred, critic_value = self.model(state_tensor)
+            y_pred, critic_value = self.model(observations)
             critic_value = critic_value.detach().numpy()
-
-            # TODO: How important is the length of an episode? Is there a future reward of a solved state?
-            shop_reward = reward[0][shop_name]
-            target = np.reshape(shop_reward, (1, 1))
-
-            delta = target - critic_value
-
-            # TODO reset in chosen_action
-            if shop_reward > 0:
-                del self.memory[shop_name]
-
-            _actions = np.zeros([1, self.n_actions])
-            _actions[np.arange(
-                1), self.action_space_inverted.index(action)] = 1.0
+            delta = rewards - critic_value
 
             loss = torch.nn.MSELoss()
-            output = loss(torch.tensor(critic_value, requires_grad=True).to(torch.float64),
-                          torch.tensor(target, requires_grad=True))
+            output: torch.Tensor = loss(torch.tensor(critic_value, requires_grad=True).to(torch.float64),
+                          torch.tensor(rewards, requires_grad=True))
             self.model.critic_optimizer.zero_grad()
 
             out = torch.clip(y_pred, 1e-8, 1 - 1e-8)
-            log_lik = torch.tensor(_actions) * torch.log(out)
-            delta = torch.tensor(delta)
-            actor_loss = torch.sum(-log_lik * delta)
+            log_lik = torch.log(out).gather(0, selected_actions)
+            actor_loss = torch.mean(-log_lik * delta, dim=0)
 
             self.model.actor_optimizer.zero_grad()
             output.backward()
@@ -202,8 +184,8 @@ class Agent:
     def add_shops(self, shops):
         self.shops = self.shops.union(shops)
 
-    def add_to_replay_buffer(self, states, actions, reward, states_, dones):
+    def add_to_replay_buffer(self, states, actions, reward, next_states, dones):
         # ToDo: only add data that is relevant for this agent to the replay_buffer
         for shop_name, action in actions.items():
             if shop_name in self.shops:
-                self.replay_buffers[shop_name].add(states[shop_name], action, reward[0][shop_name])
+                self.replay_buffers[shop_name].add(states[shop_name], action, torch.argmax(action), reward[0][shop_name], next_states)

@@ -110,7 +110,7 @@ class ShopAgentController:
         for shop in self.shops:
             if not self.visited_shop[self.shops.index(shop)]:
                 continue
-            observation, action, selected_action, reward, next_observation = self.replay_buffers[shop].get_batch(batch_size)
+            observation, action, selected_action, reward, next_observation = self.replay_buffers[shop].get_batch(batch_size, False)
             # One hot encode previously chosen action:
             one_hot_actions: torch.Tensor = F.one_hot(selected_action, num_classes=self.num_components)
             critic = self.critics[shop]
@@ -272,5 +272,5 @@ class NewActorCritic:
         for shop in self.shops:
             if self.replay_buffers[shop].is_empty():
                 continue
-            observation, action, selected_action, reward, next_observation = self.replay_buffers[shop].get_batch(batch_size)
+            observation, action, selected_action, reward, next_observation = self.replay_buffers[shop].get_batch(batch_size, not args.disable_random_batch, args.balanced_sampling)
             self.acs[shop].learn(observation, selected_action, reward, next_observation)
