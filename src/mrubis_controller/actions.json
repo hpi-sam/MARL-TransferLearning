@@ -1,0 +1,27 @@
+{
+    "0": {
+        "shop": "mRUBiS #2",
+        "component": "Region Item Filter",
+        "predicted_utility": 37910.00547349671
+    },
+    "1": {
+        "shop": "mRUBiS #5",
+        "component": "Region Item Filter",
+        "predicted_utility": 32815.640526831834
+    },
+    "2": {
+        "shop": "mRUBiS #1",
+        "component": "Past Sales Item Filter",
+        "predicted_utility": 26477.385306306576
+    },
+    "3": {
+        "shop": "mRUBiS #8",
+        "component": "Category Item Filter",
+        "predicted_utility": 20066.29077598045
+    },
+    "4": {
+        "shop": "mRUBiS #10",
+        "component": "Category Item Filter",
+        "predicted_utility": 16340.998752240834
+    }
+}
