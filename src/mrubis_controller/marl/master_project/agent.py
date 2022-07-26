@@ -139,13 +139,16 @@ class Agent:
             delta = rewards - critic_value
 
             loss = torch.nn.MSELoss()
-            output: torch.Tensor = loss(torch.tensor(critic_value, requires_grad=True).to(torch.float64),
-                          torch.tensor(rewards, requires_grad=True))
+            # ToDo check whether rewards is correctly used here, or should be a new tensor
+            output: torch.Tensor = loss(torch.tensor(critic_value, requires_grad=True).to(torch.float32),
+                          rewards.requires_grad_())
             self.model.critic_optimizer.zero_grad()
 
             out = torch.clip(y_pred, 1e-8, 1 - 1e-8)
-            log_lik = torch.log(out).gather(0, selected_actions)
-            actor_loss = torch.mean(-log_lik * delta, dim=0)
+            log_lik = torch.log(out).gather(1, torch.unsqueeze(selected_actions, 1))
+            # delta = torch.tensor(delta)
+            # ToDo: Check if this makes sense, or whether we should remove the inner sum
+            actor_loss = torch.mean(torch.sum(-log_lik * delta, dim=0), dim=0)
 
             self.model.actor_optimizer.zero_grad()
             output.backward()
@@ -185,7 +188,15 @@ class Agent:
         self.shops = self.shops.union(shops)
 
     def add_to_replay_buffer(self, states, actions, reward, next_states, dones):
-        # ToDo: only add data that is relevant for this agent to the replay_buffer
-        for shop_name, action in actions.items():
+        for action_idx, action in actions.items():
+            shop_name = action["shop"]
             if shop_name in self.shops:
-                self.replay_buffers[shop_name].add(states[shop_name], action, torch.argmax(action), reward[0][shop_name], next_states)
+                #ToDo: Masterprojekt only using action[component] here !
+                # ToDo: check if we are really using the action_index correctly (before was argmax(action))
+                state = encode_observations(states[shop_name])
+                state_tensor = torch.from_numpy(state).float()
+                next_state = encode_observations(next_states[shop_name])
+                next_state_tensor = torch.from_numpy(next_state).float()
+                reward_tensor = torch.unsqueeze(torch.tensor(reward[0][shop_name]), 0)
+                # ToDo: Insert actual actions, but we need them encoded to use them as tensor
+                self.replay_buffers[shop_name].add(state_tensor, torch.tensor(0), torch.tensor(action_idx), reward_tensor, next_state_tensor)

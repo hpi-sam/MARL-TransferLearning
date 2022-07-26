@@ -27,13 +27,13 @@ class ReplayBuffer:
         self.state["next_observations"] = next_observations
 
     def _to_lists(self, state: pandas.DataFrame):
-        return (
+        return [
             state["observations"].tolist(),
             state["actions"].tolist(),
             state["selected_actions"].tolist(),
             state["rewards"].tolist(),
             state["next_observations"].tolist(),
-        )
+        ]
 
     def add(self, observation, action, selected_action_index, reward, next_observation):
         with warnings.catch_warnings():

@@ -60,6 +60,7 @@ class MasterBaselineRunner:
                 reward, observations_, terminated, env_info = self.env.step(actions)
                 if actions is not None:
                     rewards.append(reward)
+                    print(reward)
                     # old: self.mac.learn(observations, actions, reward, observations_, terminated)
                     self.mac.add_to_replay_buffer(observations, actions, reward, observations_, terminated)
                     res = self.mac.learn(10)
