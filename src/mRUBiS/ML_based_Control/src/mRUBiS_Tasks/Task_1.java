@@ -103,6 +103,8 @@ public class Task_1 {
 	private static int traceLength = 0;
 	
 	private static boolean sendrootIssue = false;
+
+	private static boolean alternatingTrace = false;
 	
 
 	public static void main(String[] args) throws SDMException, IOException, InterruptedException {
@@ -240,6 +242,9 @@ public class Task_1 {
 			}
 			else if (specificTrace) {
 				strategy = new Trace_SpecificComponent(architecture, injectionComponentName);
+			}
+			else if (alternatingTrace) {
+				strategy = new Trace_AlternatingComponent(architecture, injectionComponentName, numEpisodes);
 			}
 			else {
 				strategy = new Trace_VariableShops(simulator.getSupportedIssueTypes(), architecture, injectionMean, injectionVariance);
@@ -585,6 +590,10 @@ public class Task_1 {
 		
 		if (configJSON.containsKey("trace_length") && configJSON.get("trace_length") != "0") {
 			traceLength = Integer.parseInt(configJSON.get("trace_length"));
+		}
+
+		if(configJSON.containsKey("alternating_trace")) {
+			alternatingTrace =  Boolean.parseBoolean(configJSON.get("alternating_trace"));
 		}
 		
 	}
