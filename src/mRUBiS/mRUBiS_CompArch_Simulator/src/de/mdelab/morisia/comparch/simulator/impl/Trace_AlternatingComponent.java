@@ -1,7 +1,5 @@
 package de.mdelab.morisia.comparch.simulator.impl;
 
-package de.mdelab.morisia.comparch.simulator.impl;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -24,12 +22,11 @@ public class Trace_AlternatingComponent implements InjectionStrategy {
 
 	private IssueType[] issueTypes;
 	private Architecture eArchitecture;
-	private Random random;
+	private Random random = new Random();
     private int totalEpisodes;
     private List<List<Component>> injectionTargets;
 
-	public Trace_AlternatingComponent(IssueType[] issueTypes, Architecture eArchitecture, int totalEpisodes) {
-		this.issueTypes = issueTypes;
+	public Trace_AlternatingComponent(Architecture eArchitecture, int totalEpisodes) {
 		this.eArchitecture = eArchitecture;
 		this.totalEpisodes = totalEpisodes;
         this.initInjectionTargets();
@@ -41,7 +38,6 @@ public class Trace_AlternatingComponent implements InjectionStrategy {
         List<Integer> shopIDs = IntStream.range(0, numberOfShops).boxed().collect(Collectors.toList());
 		Collections.shuffle(shopIDs, this.random);
 
-        this.random = new Random();
         Tenant dummyTenant = this.eArchitecture.getTenants().get(shopIDs.get(0));
         int c1Num = this.random.nextInt(dummyTenant.getComponents().size());
         int c2Num = this.random.nextInt(dummyTenant.getComponents().size());
@@ -51,13 +47,13 @@ public class Trace_AlternatingComponent implements InjectionStrategy {
         String c1TypeName = dummyTenant.getComponents().get(c1Num).getType().getName();
         String c2TypeName = dummyTenant.getComponents().get(c2Num).getType().getName();
 
-        int middle = (int) (Math.floor(totalEpisodes/2));
+        int middle = (int) (Math.floor(numberOfShops/2));
 
         for (int i = 0; i < middle; i++) {
 			Integer shopID = shopIDs.get(i);
 			Tenant tenant = this.eArchitecture.getTenants().get(shopID);
-			Component c1 = tenant.getComponents().stream().filter(c -> component.getType().getName().equals(c1)).collect(Collectors.toList());
-            Component c2 = tenant.getComponents().stream().filter(c -> component.getType().getName().equals(c2)).collect(Collectors.toList());
+			Component c1 = tenant.getComponents().stream().filter(c -> c.getType().getName().equals(c1TypeName)).collect(Collectors.toList()).get(0);
+            Component c2 = tenant.getComponents().stream().filter(c -> c.getType().getName().equals(c2TypeName)).collect(Collectors.toList()).get(0);
             this.injectionTargets.get(0).add(c1);
             this.injectionTargets.get(1).add(c2);
 		}
@@ -65,10 +61,10 @@ public class Trace_AlternatingComponent implements InjectionStrategy {
         for (int i = middle + 1; i < shopIDs.size(); i++) {
 			Integer shopID = shopIDs.get(i);
 			Tenant tenant = this.eArchitecture.getTenants().get(shopID);
-			Component c1 = tenant.getComponents().stream().filter(c -> component.getType().getName().equals(c1)).collect(Collectors.toList());
-            Component c2 = tenant.getComponents().stream().filter(c -> component.getType().getName().equals(c2)).collect(Collectors.toList());
+			Component c1 = tenant.getComponents().stream().filter(c -> c.getType().getName().equals(c1TypeName)).collect(Collectors.toList()).get(0);
+            Component c2 = tenant.getComponents().stream().filter(c -> c.getType().getName().equals(c2TypeName)).collect(Collectors.toList()).get(0);            this.injectionTargets.get(0).add(c2);
+            this.injectionTargets.get(1).add(c2);
             this.injectionTargets.get(0).add(c2);
-            this.injectionTargets.get(1).add(c1);
 		}
     }
 	
@@ -77,7 +73,7 @@ public class Trace_AlternatingComponent implements InjectionStrategy {
 		List<Injection<? extends ArchitecturalElement>> injections = new LinkedList<Injection<? extends ArchitecturalElement>>();
 
         int idx = 0;
-        if(Math.floor(totalEpisodes/2) == runCount) {
+        if(Math.floor(totalEpisodes/2) >= runCount) {
             idx = 1;
         }
         List<Component> componentList = this.injectionTargets.get(idx);
