@@ -47,6 +47,7 @@ import de.mdelab.morisia.comparch.Tenant;
 import de.mdelab.morisia.comparch.simulator.Capability;
 import de.mdelab.morisia.comparch.simulator.ComparchSimulator;
 import de.mdelab.morisia.comparch.simulator.InjectionStrategy;
+import de.mdelab.morisia.comparch.simulator.impl.Trace_AlternatingComponent;
 import de.mdelab.morisia.comparch.simulator.impl.Trace_Deterministic;
 import de.mdelab.morisia.comparch.simulator.impl.Trace_VariableShops;
 import de.mdelab.morisia.comparch.simulator.impl.Trace_SpecificComponent;
@@ -244,7 +245,7 @@ public class Task_1 {
 				strategy = new Trace_SpecificComponent(architecture, injectionComponentName);
 			}
 			else if (alternatingTrace) {
-				strategy = new Trace_AlternatingComponent(architecture, injectionComponentName, numEpisodes);
+				strategy = new Trace_AlternatingComponent(architecture, numEpisodes);
 			}
 			else {
 				strategy = new Trace_VariableShops(simulator.getSupportedIssueTypes(), architecture, injectionMean, injectionVariance);

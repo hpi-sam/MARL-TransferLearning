@@ -194,7 +194,7 @@ class MrubisEnv(gym.Env):
             "trace": self.trace,
             "root_causes": self.root_caues,
             "trace_length": str(self.trace_length),
-            "alternating_trace": self.alternating_trace,
+            "alternating_trace": str(self.alternating_trace),
             "send_root_issue": str(self.send_root_issue)
         }))
         response = self.communicator.readln()
