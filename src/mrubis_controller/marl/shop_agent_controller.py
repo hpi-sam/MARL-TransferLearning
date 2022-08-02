@@ -108,6 +108,7 @@ class ShopAgentController:
 
     def learn_from_replaybuffer(self, batch_size: int = 1):
         for shop in self.shops:
+            print(shop)
             if not self.visited_shop[self.shops.index(shop)]:
                 continue
             observation, action, selected_action, reward, next_observation = self.replay_buffers[shop].get_batch(batch_size, False)
@@ -256,7 +257,11 @@ class NewActorCritic:
                 reward_tensor.detach(),
                 next_observation_tensor.detach()
             )
-    
+
+    def handle_episode_observation(self, sysobservation: SystemObservation):
+        for shop_name, observation in sysobservation.shops.items():
+            self.replay_buffers[shop_name].update_dist(observation.encode_to_tensor())
+
     def share_experience(self):
         ret = []
         for buffer in self.replay_buffers.values():

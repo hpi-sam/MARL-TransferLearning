@@ -11,6 +11,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Random;
 import java.util.logging.ConsoleHandler;
 import java.util.logging.FileHandler;
 import java.util.logging.Formatter;
@@ -19,6 +20,8 @@ import java.util.logging.Level;
 import java.util.logging.LogRecord;
 import java.util.logging.Logger;
 import java.util.logging.SimpleFormatter;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.eclipse.emf.common.notify.Notification;
 import org.eclipse.emf.ecore.EClassifier;
@@ -106,6 +109,8 @@ public class Task_1 {
 	private static boolean sendrootIssue = false;
 
 	private static boolean alternatingTrace = false;
+
+	private static boolean constricted = false;
 	
 
 	public static void main(String[] args) throws SDMException, IOException, InterruptedException {
@@ -168,6 +173,11 @@ public class Task_1 {
 		
 		int run = 0;
 		int episode = 0;
+
+		List<String> cg1 = null;
+		List<String> cg2 = null;
+		List<Integer> sg1 = null;
+		List<Integer> sg2 = null;
 		
 		while (episode < numEpisodes + 3) {
 			
@@ -248,7 +258,18 @@ public class Task_1 {
 				strategy = new Trace_AlternatingComponent(architecture, numEpisodes);
 			}
 			else {
-				strategy = new Trace_VariableShops(simulator.getSupportedIssueTypes(), architecture, injectionMean, injectionVariance);
+				if (constricted && (cg1 == null || cg2 == null || sg1 == null || sg2 == null)) {
+					Random random = new Random();
+					List<String> comps = architecture.getTenants().get(0).getComponents().stream().map(e -> e.getType().getName()).collect(Collectors.toList());
+					Collections.shuffle(comps, random);
+					cg1 = comps.subList(0, comps.size() / 2);
+					cg2 = comps.subList((comps.size() / 2) + 1, comps.size());
+					List<Integer> shopIDs = IntStream.range(0, architecture.getTenants().size()).boxed().collect(Collectors.toList());
+					Collections.shuffle(shopIDs, random);
+					sg1 = shopIDs.subList(0, shopIDs.size() / 2);
+					sg2 = shopIDs.subList((shopIDs.size() / 2) + 1, shopIDs.size());
+				}
+				strategy = new Trace_VariableShops(simulator.getSupportedIssueTypes(), architecture, injectionMean, injectionVariance, cg1, cg2, sg1, sg2);
 			}
 			simulator.setInjectionStrategy(strategy);
 		
@@ -592,6 +613,10 @@ public class Task_1 {
 		if (configJSON.containsKey("trace_length") && configJSON.get("trace_length") != "0") {
 			traceLength = Integer.parseInt(configJSON.get("trace_length"));
 		}
+
+		if(configJSON.containsKey("constricted")) {
+			constricted =  Boolean.parseBoolean(configJSON.get("constricted"));
+		} 
 
 		if(configJSON.containsKey("alternating_trace")) {
 			alternatingTrace =  Boolean.parseBoolean(configJSON.get("alternating_trace"));

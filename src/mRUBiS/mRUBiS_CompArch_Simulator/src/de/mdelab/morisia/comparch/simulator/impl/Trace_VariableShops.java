@@ -22,13 +22,29 @@ public class Trace_VariableShops implements InjectionStrategy {
 	private double mean;
 	private double variance;
 	private Random random;
+	private boolean constrict;
+	private List<Components> componentsGroup1;
+	private List<Components> componentsGroup2;
+	private List<Integer> sg1;
+	private List<Integer> sg2;
 
-	public Trace_VariableShops(IssueType[] issueTypes, Architecture eArchitecture, double mean, double variance) {
+	public Trace_VariableShops(IssueType[] issueTypes, Architecture eArchitecture, double mean, double variance, boolean constrict,
+		List<String> cg1, List<String> cg2, List<Integer> sg1, List<Integer> sg2) {
 		this.issueTypes = issueTypes;
 		this.eArchitecture = eArchitecture;
 		this.mean = mean;
 		this.variance = variance;
+		this.constrict = constrict;
+		this.initComponentGroups(cg1, cg2);
+		this.sg1 = sg1;
+		this.sg2 = sg2;
 	}
+
+	private  void initComponentGroups(List<String> cg1, List<String> cg2){
+		// Make to actual compoentn form names
+	}
+
+	
 	
 	@Override
 	public List<Injection<? extends ArchitecturalElement>> getInjections(int runCount) {
@@ -41,13 +57,16 @@ public class Trace_VariableShops implements InjectionStrategy {
 		numberOfIssues = Math.min(Math.max(1, numberOfIssues), numberOfShops);
 		List<Integer> shopIDs = IntStream.range(0, numberOfShops).boxed().collect(Collectors.toList());
 		Collections.shuffle(shopIDs, this.random);
-		for (int i = 0; i < numberOfIssues; i++) {
-			Integer shopID = shopIDs.get(i);
+		Integer numShopsGroup1 = Math.floor(numberOfIssues / 2);
+		List<Integer> shopsIDsGroup1 = this.sg1.subList(0, numShopsGroup1);
+		List<Integer> shopsIDsGroup2 = this.sg1.subList(0, numberOfIssues - numShopsGroup1);
+
+		for (Integer shopID : shopsIDsGroup1) {
 			Tenant tenant = this.eArchitecture.getTenants().get(shopID);
 			Component component = null;
 			while (component == null) {
-				int componentNumber = this.random.nextInt(tenant.getComponents().size());
-				component = tenant.getComponents().get(componentNumber);
+				int componentNumber = this.random.nextInt(this.componentsGroup1.size());
+				component = this.componentsGroup1.get(componentNumber);
 				if (component.getType().getName()
 						.equals("Future Sales Item Filter")) {
 					// last filter of the pipe should bot be affected by an
@@ -57,6 +76,22 @@ public class Trace_VariableShops implements InjectionStrategy {
 			}
 			injections.add(new Injection<Component>(IssueType.CF3, component));
 		}		
+
+		for (Integer shopID : shopsIDsGroup2) {
+			Tenant tenant = this.eArchitecture.getTenants().get(shopID);
+			Component component = null;
+			while (component == null) {
+				int componentNumber = this.random.nextInt(this.componentsGroup2.size());
+				component = this.componentsGroup2.get(componentNumber);
+				if (component.getType().getName()
+						.equals("Future Sales Item Filter")) {
+					// last filter of the pipe should bot be affected by an
+					// issue.
+					component = null;
+				}
+			}
+			injections.add(new Injection<Component>(IssueType.CF3, component));
+		}	
 		
 		return injections;
 	}

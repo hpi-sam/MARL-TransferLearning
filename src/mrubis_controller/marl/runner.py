@@ -1,9 +1,14 @@
 import wandb
+from entities.components import Components
 from marl.mrubis_data_helper import has_shop_remaining_issues
 from marl.mrubis_env import MrubisEnv
 from marl.shop_agent_controller import ShopAgentController
 import alive_progress as ap
 from marl.options import args
+import plotly.express as px
+
+from marl.utils import distance_rp_buffers
+import math
 
 
 class Runner:
@@ -81,6 +86,11 @@ class ReplayBufferRunner:
                 terminated = False
                 current_observations = self.env.reset()
                 self.agent_controller.reset_shield()
+                self.agent_controller.handle_episode_observation(current_observations)
+                for shop_name, buffer in self.agent_controller.replay_buffers.items():
+                    wandb.log({f'{shop_name} Conditional Probabilities': px.imshow(buffer.get_dist_probs()[0], text_auto=True, x=Components.value_list(), y=Components.value_list())}, step=step)
+                distances, buffer_names = distance_rp_buffers(self.agent_controller.replay_buffers)
+                wandb.log({f'Replay Buffer Distances': px.imshow(distances / math.sqrt(18**2), text_auto=True, x=buffer_names, y=buffer_names)}, step=step)
                 while not terminated:
                     bar()
                     bar.text = f"Episode: {episode} Step: {step}"
@@ -98,7 +108,7 @@ class ReplayBufferRunner:
                         }, step=step)
                     # self.agent_controller.learn(actions, reward, next_observations)
                     self.agent_controller.add_to_replaybuffer(actions, reward, next_observations)
-                    self.agent_controller.learn_from_replaybuffer(args.batch_size)
+                    
                     current_observations = next_observations
                     if terminated:
                         for shop, count in env_info['stats'].items():
@@ -106,4 +116,5 @@ class ReplayBufferRunner:
                             self.agent_controller.reset_shield()
                             if count != -1:
                                 wandb.log({f"{shop}_fixed": count}, step=step)
+                self.agent_controller.learn_from_replaybuffer(args.batch_size)
                 print(f"episode {episode} done")

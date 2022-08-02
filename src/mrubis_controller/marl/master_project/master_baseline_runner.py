@@ -1,6 +1,7 @@
 import wandb
 # from mrubis_controller.marl.mrubis_mock_env import MrubisMockEnv
 from marl.master_project.multi_agent_controller import MultiAgentController
+from marl.options import args
 
 
 class MasterBaselineRunner:
@@ -43,7 +44,6 @@ class MasterBaselineRunner:
     def run(self, episodes):
         """ runs the simulation """
         rewards = []
-        metrics = []
         logs = []
         self.reset()
         # wandb.init(project="mrubis_test", entity="mrubis",
@@ -56,15 +56,18 @@ class MasterBaselineRunner:
                       commit=False, step=self.step)
 
             while not terminated:
-                actions, regret, root_cause = self.mac.select_actions(observations)
+                actions, regret, root_cause, probabilities = self.mac.select_actions(observations)
                 reward, observations_, terminated, env_info = self.env.step(actions)
                 if actions is not None:
                     rewards.append(reward)
-                    print(reward)
-                    # old: self.mac.learn(observations, actions, reward, observations_, terminated)
-                    self.mac.add_to_replay_buffer(observations, actions, reward, observations_, terminated)
-                    res = self.mac.learn(10)
-                    metrics.append(res)
+                    print("reward:", reward)
+                    self.mac.add_to_replay_buffer(observations, probabilities , actions, reward, observations_, terminated)
+                    if args.on_policy:
+                        self.mac.learn_on_policy(observations, actions, reward, observations_, terminated)
+                    elif args.on_off_policy:
+                        self.mac.learn_on_off_policy(observations, actions, reward, observations_, terminated, args.batch_size)
+                    else:
+                        self.mac.learn_off_policy(args.batch_size)
                     for shop in regret[0].keys():
                         wandb.log(
                             {f'Regret_{shop}': regret[0][shop]}, step=self.step)

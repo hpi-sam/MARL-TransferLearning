@@ -81,8 +81,8 @@ public class Trace_AlternatingComponent implements InjectionStrategy {
 		List<Injection<? extends ArchitecturalElement>> injections = new LinkedList<Injection<? extends ArchitecturalElement>>();
 
         int idx = 0;
-        if(Math.floor(totalEpisodes/2) >= runCount) {
-            System.out.println("Switched components to inject into");
+        if(Math.floor(totalEpisodes/2) <= runCount) {
+            System.out.println("Switched components to inject into for half of the components");
             idx = 1;
         }
         List<Component> componentList = this.injectionTargets.get(idx);
