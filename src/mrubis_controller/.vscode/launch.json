@@ -11,7 +11,7 @@
             "program": "main.py",
             "console": "integratedTerminal",
             "justMyCode": true,
-            "args": ["--runner-master"]
+            "args": ["--runner-master", "--on-off-policy"]
         }
     ]
 }

@@ -18,6 +18,8 @@ def build_rewards(agents, agent_index, rewards):
     # eigentlich der zweite Parameter: rewards[1] (was eine einzelne Zahl ist, aber das wird nirgends benutzt)
     return {shop: rewards[shop] for shop in agents[agent_index].shops}, 1
 
+def build_actions_p(agents, agent_index, actions_p):
+    return {shop: rewards[shop] for shop in agents[agent_index].shops}
 
 def build_actions(agents, agent_index, actions):
     """ extracts the relevant actions taken per agent

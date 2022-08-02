@@ -4,11 +4,30 @@ import pandas
 import torch
 import math
 
+from entities.components import Components
+
 class ReplayBuffer:
     def __init__(self, max_size = -1):
         self.state = pandas.DataFrame(columns=["observations", "actions", "selected_actios", "rewards", "next_observations"])
         self.max_size = max_size
+        self.components = Components.value_list()
+        self.dist = torch.zeros((len(self.components), len(self.components)))
+        self.dist_obs = []
     
+    def update_dist(self, observation):
+        self.dist_obs.append(observation)
+        nonzero = torch.nonzero(observation).flatten()
+        for index_tuple in torch.cartesian_prod(nonzero, nonzero):
+            self.dist[index_tuple[0], index_tuple[1]] += 1
+
+    def get_dist_obs(self):
+        return self.dist_obs    
+    
+    def get_dist_probs(self):
+        """Returns the conditional probability that we observe broken components together and the probability that a component breaks."""
+        clamped_diag = torch.clamp_min(self.dist.diag(), 1)
+        return self.dist.div(clamped_diag).t(), self.dist.diag().div(clamped_diag)
+
     def is_empty(self):
         return len(self.state) == 0
     
@@ -68,7 +87,7 @@ class ReplayBuffer:
                 )
             indices = positive.iloc[indices_p].index.tolist() + negative.iloc[indices_n].index.tolist()
             np.random.shuffle(indices)
-            indexed = self.state[indices]
+            indexed = self.state.iloc[indices]
             return list(map(torch.stack, self._to_lists(indexed)))
 
     def get_batch(self, batch_size, random=True, balanced=False):

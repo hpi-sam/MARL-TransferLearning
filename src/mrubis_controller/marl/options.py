@@ -14,4 +14,6 @@ parser.add_argument("--disable-random-batch", action="store_true", help="Disbale
 parser.add_argument("--batch-size", type=int, default=20, help="Sample size from replay buffer.")
 parser.add_argument("--balanced-sampling", action="store_true", help="Balance positive and negative signals when sampling from replay buffer.")
 parser.add_argument("--wandb", action="store_true", help="Log with wandb")
+parser.add_argument("--on-policy", action="store_true", help="Enable on policy training.")
+parser.add_argument("--on-off-policy", action="store_true", help="Enable on-off policy training.")
 args = parser.parse_args()

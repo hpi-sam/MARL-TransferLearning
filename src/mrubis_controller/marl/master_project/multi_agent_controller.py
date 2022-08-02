@@ -34,31 +34,103 @@ class MultiAgentController:
         actions = []
         regrets = {}
         root_causes = {}
+        action_probabilities = {}
         for index, agent in enumerate(self.agents):
             if self.robustness_activated and self.robustness.skip_agent(index):
                 continue
             challenged_shops = self.robustness.get_execution_plan(
                 index) if self.robustness_activated else None
-            action, regret, root_cause = agent.choose_action(
+            action, regret, root_cause, probabilities = agent.choose_action(
                 build_observations(self.agents, index, observations, challenged_shops))
             regrets[index] = regret
+            action_probabilities = {**action_probabilities, **probabilities}
             root_causes[index] = root_cause
             actions.append(action)
-        return self.rank_learner.sort_actions(actions), regrets, root_causes
+        return self.rank_learner.sort_actions(actions), regrets, root_causes, action_probabilities
 
-    def add_to_replay_buffer(self, observations, actions, rewards, observations_, dones):
+    def add_to_replay_buffer(self, observations, probabilities, actions, rewards, observations_, dones):
         for index, agent in enumerate(self.agents):
             agent.add_to_replay_buffer(build_observations(self.agents, index, observations),
+                                        probabilities,
                                        build_actions(self.agents, index, actions),
                                        build_rewards(self.agents, index, rewards),
                                        build_observations(self.agents, index, observations_),
                                        dones)
 
-    def learn(self, batch_size):
+    def learn_off_policy(self, batch_size):
         """ start learning for Agents and RankLearner """
         metrics = {}
         for index, agent in enumerate(self.agents):
-            metrics[index] = agent.learn(batch_size)
+            metrics[index] = agent.learn_off_policy(batch_size)
+        return metrics
+    
+    def learn_on_policy(self, observations, actions, rewards, observations_, dones):
+        """ start learning for Agents and RankLearner """
+        metrics = {}
+        for index, agent in enumerate(self.agents):
+            if self.robustness_activated and self.robustness.skip_agent(index):
+                continue
+
+            if self.robustness_activated:
+                self.robustness.validate_execution(
+                    self.agents, index, observations_)
+
+            metrics[index] = agent.learn_on_policy(build_observations(self.agents, index, observations),
+                                         build_actions(
+                                             self.agents, index, actions),
+                                         build_rewards(
+                                             self.agents, index, rewards),
+                                         build_observations(
+                                             self.agents, index, observations_),
+                                         dones)
+
+        history = {
+            'observations': observations,
+            'actions': actions,
+            'rewards': rewards,
+            'observations_': observations_,
+            'dones': dones
+        }
+        self.robustness.monitor(metrics, history)
+
+        if self.robustness_activated:
+            self.robustness.analyze(self.agents)
+
+        return metrics
+    
+    def learn_on_off_policy(self, observations, actions, rewards, observations_, dones, batch_size):
+        """ start learning for Agents and RankLearner """
+        metrics = {}
+        for index, agent in enumerate(self.agents):
+            if self.robustness_activated and self.robustness.skip_agent(index):
+                continue
+
+            if self.robustness_activated:
+                self.robustness.validate_execution(
+                    self.agents, index, observations_)
+
+            metrics[index] = agent.learn_on_off_policy(build_observations(self.agents, index, observations),
+                                         build_actions(
+                                             self.agents, index, actions),
+                                         build_rewards(
+                                             self.agents, index, rewards),
+                                         build_observations(
+                                             self.agents, index, observations_),
+                                         dones,
+                                         batch_size)
+
+        history = {
+            'observations': observations,
+            'actions': actions,
+            'rewards': rewards,
+            'observations_': observations_,
+            'dones': dones
+        }
+        self.robustness.monitor(metrics, history)
+
+        if self.robustness_activated:
+            self.robustness.analyze(self.agents)
+
         return metrics
 
     def save_models(self, episode):
