@@ -62,10 +62,18 @@ public class Trace_AlternatingComponent implements InjectionStrategy {
 			Integer shopID = shopIDs.get(i);
 			Tenant tenant = this.eArchitecture.getTenants().get(shopID);
 			Component c1 = tenant.getComponents().stream().filter(c -> c.getType().getName().equals(c1TypeName)).collect(Collectors.toList()).get(0);
-            Component c2 = tenant.getComponents().stream().filter(c -> c.getType().getName().equals(c2TypeName)).collect(Collectors.toList()).get(0);            this.injectionTargets.get(0).add(c2);
+            Component c2 = tenant.getComponents().stream().filter(c -> c.getType().getName().equals(c2TypeName)).collect(Collectors.toList()).get(0);
             this.injectionTargets.get(1).add(c2);
             this.injectionTargets.get(0).add(c2);
 		}
+
+        for(Component comp : this.injectionTargets.get(0)) {
+            System.out.println(comp);
+        }
+        for(Component comp : this.injectionTargets.get(1)) {
+            System.out.println(comp);
+        }
+
     }
 	
 	@Override
@@ -73,7 +81,8 @@ public class Trace_AlternatingComponent implements InjectionStrategy {
 		List<Injection<? extends ArchitecturalElement>> injections = new LinkedList<Injection<? extends ArchitecturalElement>>();
 
         int idx = 0;
-        if(Math.floor(totalEpisodes/2) >= runCount) {
+        if(Math.floor(totalEpisodes/2) <= runCount) {
+            System.out.println("Switched components to inject into for half of the components");
             idx = 1;
         }
         List<Component> componentList = this.injectionTargets.get(idx);
