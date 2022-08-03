@@ -51,6 +51,7 @@ import de.mdelab.morisia.comparch.simulator.Capability;
 import de.mdelab.morisia.comparch.simulator.ComparchSimulator;
 import de.mdelab.morisia.comparch.simulator.InjectionStrategy;
 import de.mdelab.morisia.comparch.simulator.impl.Trace_AlternatingComponent;
+import de.mdelab.morisia.comparch.simulator.impl.Trace_Constricted;
 import de.mdelab.morisia.comparch.simulator.impl.Trace_Deterministic;
 import de.mdelab.morisia.comparch.simulator.impl.Trace_VariableShops;
 import de.mdelab.morisia.comparch.simulator.impl.Trace_SpecificComponent;
@@ -257,8 +258,8 @@ public class Task_1 {
 			else if (alternatingTrace) {
 				strategy = new Trace_AlternatingComponent(architecture, numEpisodes);
 			}
-			else {
-				if (constricted && (cg1 == null || cg2 == null || sg1 == null || sg2 == null)) {
+			else if (constricted) {
+				if (cg1 == null || cg2 == null || sg1 == null || sg2 == null) {
 					Random random = new Random();
 					List<String> comps = architecture.getTenants().get(0).getComponents().stream().map(e -> e.getType().getName()).collect(Collectors.toList());
 					Collections.shuffle(comps, random);
@@ -269,7 +270,10 @@ public class Task_1 {
 					sg1 = shopIDs.subList(0, shopIDs.size() / 2);
 					sg2 = shopIDs.subList((shopIDs.size() / 2) + 1, shopIDs.size());
 				}
-				strategy = new Trace_VariableShops(simulator.getSupportedIssueTypes(), architecture, injectionMean, injectionVariance, cg1, cg2, sg1, sg2);
+				strategy = new Trace_Constricted(simulator.getSupportedIssueTypes(), architecture, injectionMean, injectionVariance, cg1, cg2, sg1, sg2);
+			}
+			else {
+				strategy = new Trace_VariableShops(simulator.getSupportedIssueTypes(), architecture, injectionMean, injectionVariance);
 			}
 			simulator.setInjectionStrategy(strategy);
 		
