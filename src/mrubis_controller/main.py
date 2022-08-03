@@ -44,7 +44,8 @@ def main():
             trace="",
             trace_length=0,
             send_root_issue=True,
-            alternating_trace=True,
+            alternating_trace=False,
+            constricted=True,
             reward_variance=0)
         shops = {f'mRUBiS #{i+1}' for i in range(num_shops)}
         agent_controller = NewActorCritic(shops)
