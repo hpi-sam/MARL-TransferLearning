@@ -90,7 +90,6 @@ class Agent:
         if shop_name in self.sampled_actions.keys():
             total = np.float64(0)
             for action in self.sampled_actions[shop_name]:
-                print(p[action])
                 total += p[action]
                 p[action] = 0
             c =  len(p) - len(self.sampled_actions[shop_name])
@@ -121,9 +120,6 @@ class Agent:
                 if args.use_exploration:
                     action = self.sample_random_action(shop_name, probabilities).item()
                     if shop_name in self.sampled_actions.keys():
-                        while action in self.sampled_actions[shop_name]:
-                            print(self.sampled_actions[shop_name])
-                            action = self.sample_random_action(shop_name, probabilities).item()
                         self.sampled_actions[shop_name].append(action)
                     else:
                         self.sampled_actions[shop_name] = [action]
