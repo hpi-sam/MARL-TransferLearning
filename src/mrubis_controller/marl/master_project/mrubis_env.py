@@ -96,7 +96,7 @@ class MrubisEnv(gym.Env):
                 clamp = False
             _reward[0][shop] += self.reward_variance * normal()
             if clamp:
-                _reward[0][shop] = min(0, _reward[0][shop])
+                _reward[0][shop] = min(-1, _reward[0][shop])
 
         info = self._info()
         if actions is None or self._is_fixed():
