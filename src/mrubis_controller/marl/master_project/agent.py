@@ -16,8 +16,8 @@ from marl.replay_buffer import ReplayBuffer
 from marl.options import args
 
 
-def _decoded_action(action, observation):
-    return list([components.components.keys() for shop, components in observation.items()][0])[action]
+def _decoded_action(action, observation: SystemObservation):
+    return Components.value_list()[action]
 
 
 def encode_observations(observations):
@@ -25,7 +25,6 @@ def encode_observations(observations):
         1 if component.failure_name != ComponentFailure.NONE else 0
         for component in observations.components.values()
     ]
-
     return np.array(encoded_observations, dtype=float)
 
 
@@ -143,6 +142,7 @@ class Agent:
                 actions.append(step)
                 regrets[shop_name] = regret
                 root_causes[shop_name] = root_cause_name
+        print(action_probabilities)
         return actions, regrets, root_causes, action_probabilities
 
     def choose_from_memory(self, state, shop_name, components):
@@ -161,6 +161,20 @@ class Agent:
             self.previous_actions[shop_name] = probabilities
         return action, probability
     
+    def on_policy_loss(self, state: torch.Tensor, selected_action: torch.Tensor, reward: torch.Tensor) -> torch.Tensor:
+        y_pred, critic_value = self.model(state)
+        critic_value = critic_value.detach()
+        critic_value.requires_grad = True
+        delta = reward - critic_value
+        _actions = torch.zeros([1, self.n_actions])
+        _actions[:, selected_action] = 1.0
+        critic_loss = F.mse_loss(critic_value,
+                        reward)
+        out = torch.clip(y_pred, 1e-8, 1 - 1e-8)
+        log_likelihood = _actions * torch.log(out)
+        actor_loss = torch.sum(-log_likelihood * delta)
+        return actor_loss, critic_loss
+
     def learn_on_policy(self, states, actions, reward, states_, dones):
         """ network learns to improve """
         actions = {
@@ -251,7 +265,8 @@ class Agent:
                            "critic": float(critic_loss)})
         return metrics
 
-    def on_off_policy_actor_loss(self, observation, action: torch.Tensor, selected_action, reward, next_observation, batch_observation, batch_action, batch_selected_action, batch_rewards, batch_next_observation):
+    def on_off_policy_actor_loss(self, observation, selected_action, reward, next_observation, batch_observation, batch_action, batch_selected_action, batch_rewards, batch_next_observation):
+        action, _ = self.model(observation)
         p_new, v_new = self.model(batch_observation)
         p_old = batch_action.gather(1, batch_selected_action.unsqueeze(-1))
         p_old_new = p_new.gather(1, batch_selected_action.unsqueeze(-1))
@@ -263,13 +278,12 @@ class Agent:
         next_expected_reward = next_expected_reward.detach()
         _, expected_reward = self.model(observation)
         expected_reward = expected_reward.detach()
-        assert action.requires_grad()
-        assert action.grad.grad_fn is not None
         on_loss = -torch.log(action.gather(1, selected_action.unsqueeze(-1))) * (reward + 0.99 * next_expected_reward - expected_reward)
-        off_loss = -0.99*torch.sum((p_old_new / p_old) * torch.log(p_old_new)*(batch_rewards+0.99 * value_o_t1 - value_o_t))
-        return on_loss + off_loss
+        off_loss = -torch.mean((p_old_new / p_old) * torch.log(p_old_new)*(batch_rewards+0.99 * value_o_t1 - value_o_t))
+        on_loss,_ = self.on_policy_loss(observation, selected_action, reward)
+        return on_loss + 0.05 * off_loss
 
-    def on_off_policy_critic_loss(self, observation, action, selected_action, reward, next_observation, batch_observation, batch_action, batch_selected_action, batch_rewards, batch_next_observation):
+    def on_off_policy_critic_loss(self, observation, selected_action, reward, next_observation, batch_observation, batch_action, batch_selected_action, batch_rewards, batch_next_observation):
         p_new, v_new = self.model(batch_observation)
         p_old = batch_action.gather(1, batch_selected_action.unsqueeze(-1)).detach()
         p_old_new = p_new.gather(1, batch_selected_action.unsqueeze(-1)).detach()
@@ -281,26 +295,37 @@ class Agent:
         _, next_expected_reward = self.model(next_observation)
         y_on = reward + 0.99 * next_expected_reward
         on_loss =  torch.pow(torch.sum(torch.abs(expected_reward - y_on)), 2)
-        off_loss = torch.sum(-(p_old_new / p_old) * torch.pow(torch.sum(torch.abs(value_o_t - y_off)), 2))
-        return on_loss + off_loss
+        off_loss = torch.mean(-(p_old_new / p_old) * torch.pow(torch.sum(torch.abs(value_o_t - y_off)), 2))
+        _,on_loss = self.on_policy_loss(observation, selected_action, reward)
+        return on_loss + 0.05 * off_loss
 
-    def learn_on_off_policy(self, states, actions, selected_action, reward, states_, dones, batch_size: int = 1):
+    def learn_on_off_policy(self, states, selected_action, reward, states_, dones, batch_size: int = 1):
         """ network learns to improve """
+        self.model.train()
         metrics = []
-        actions = {a["shop"]: torch.tensor(Components.value_list().index(a["component"])) for a in actions.values()}
+        selected_actions = {
+            a["shop"]: torch.tensor(Components.value_list().index(a["component"])) for a in selected_action.values()
+        }
         for shop_name in self.shops:
+            shop_reward = torch.tensor([reward[0][shop_name]]).unsqueeze(0)
+            if shop_reward[0][0] > 0:
+                del self.memory[shop_name]
+            if shop_name not in selected_actions:
+                continue
             batch_observations, batch_actions, batch_selected_actions, batch_rewards, batch_next_observations  = self.replay_buffers[shop_name].get_batch(batch_size)
             if batch_observations is None:
-                self.learn_on_off_policy
                 continue
+            shop_selected_action = selected_actions[shop_name].unsqueeze(0)
+            shop_state = states[shop_name].encode_to_tensor().unsqueeze(0)
+            shop_next_state = states_[shop_name].encode_to_tensor().unsqueeze(0)
             torch.autograd.set_detect_anomaly(True)
             self.model.critic_optimizer.zero_grad()
-            self.model.actor_optimizer.zero_grad()
-            critic_loss = self.on_off_policy_critic_loss(states, actions, selected_action, reward, states_, batch_observations, actions, batch_selected_actions, batch_rewards, batch_next_observations)
-            actor_loss = self.on_off_policy_actor_loss(states, actions, selected_action, reward, states_, batch_observations, actions, batch_selected_actions, batch_rewards, batch_next_observations)
-            actor_loss.backward()
+            critic_loss = self.on_off_policy_critic_loss(shop_state, shop_selected_action, shop_reward, shop_next_state, batch_observations, batch_actions, batch_selected_actions, batch_rewards, batch_next_observations)
             critic_loss.backward()
             self.model.critic_optimizer.step()
+            self.model.actor_optimizer.zero_grad()
+            actor_loss = self.on_off_policy_actor_loss(shop_state, shop_selected_action, shop_reward, shop_next_state, batch_observations, batch_actions, batch_selected_actions, batch_rewards, batch_next_observations)
+            actor_loss.backward()
             self.model.actor_optimizer.step()
 
             metrics.append({"actor": float(actor_loss),
