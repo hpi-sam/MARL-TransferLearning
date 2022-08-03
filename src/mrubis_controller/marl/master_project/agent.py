@@ -440,7 +440,7 @@ class Agent:
         self.sampled_actions = {}
 
     def add_to_replay_buffer(self, states, probabilites, actions, reward, next_states, dones):
-        for action_idx, action in actions.items():
+        for action in actions.values():
             shop_name = action["shop"]
             if shop_name in self.shops:
                 #ToDo: Masterprojekt only using action[component] here !
@@ -451,7 +451,7 @@ class Agent:
                 next_state_tensor = torch.from_numpy(next_state).float()
                 reward_tensor = torch.unsqueeze(torch.tensor(reward[0][shop_name]), 0)
                 # ToDo: Insert actual actions, but we need them encoded to use them as tensor
-                self.replay_buffers[shop_name].add(state_tensor, torch.from_numpy(probabilites[shop_name]), torch.tensor(action_idx), reward_tensor, next_state_tensor)
+                self.replay_buffers[shop_name].add(state_tensor, torch.from_numpy(probabilites[shop_name]), torch.tensor(Components.value_list().index(action["component"])), reward_tensor, next_state_tensor)
 
     def handle_episode_observation(self, sysobservation: SystemObservation):
         for shop_name, observation in sysobservation.shops.items():

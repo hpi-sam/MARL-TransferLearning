@@ -19,4 +19,5 @@ parser.add_argument("--on-policy", action="store_true", help="Enable on policy t
 parser.add_argument("--on-off-policy", action="store_true", help="Enable on-off policy training.")
 parser.add_argument("--use-exploration", action="store_true", default=False, help="Use exploration with guard for the master project agent" )
 parser.add_argument("--off-policy-factor", type=float, default=0.1, help="Factor of off-policy in loss calculation.")
+parser.add_argument("--transfer_strategy", type=str, default="replace", help="Transfer strategy to use for the agents after half the episodes are over. e.g. replace, combine, etc,")
 args = parser.parse_args()

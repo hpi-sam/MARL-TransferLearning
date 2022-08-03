@@ -255,10 +255,10 @@ public class Task_1 {
 			else if (specificTrace) {
 				strategy = new Trace_SpecificComponent(architecture, injectionComponentName);
 			}
-			else if (false) {
+			else if (true) {
 				strategy = new Trace_AlternatingComponent(architecture, numEpisodes);
 			}
-			else if (true) {
+			else if (false) {
 				if (cg1 == null || cg2 == null || sg1 == null || sg2 == null) {
 					Random random = new Random();
 					List<String> comps = architecture.getTenants().get(0).getComponents().stream().map(e -> e.getType().getName()).collect(Collectors.toList());
@@ -266,7 +266,7 @@ public class Task_1 {
 					cg1 = comps.subList(0, comps.size() / 2);
 					cg2 = comps.subList((comps.size() / 2) + 1, comps.size());
 					List<Integer> shopIDs = IntStream.range(0, architecture.getTenants().size()).boxed().collect(Collectors.toList());
-					Collections.shuffle(shopIDs, random);
+					// Collections.shuffle(shopIDs, random);
 					sg1 = shopIDs.subList(0, shopIDs.size() / 2);
 					sg2 = shopIDs.subList((shopIDs.size() / 2) + 1, shopIDs.size());
 				}

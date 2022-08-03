@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Random;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 import de.mdelab.morisia.comparch.ArchitecturalElement;
 import de.mdelab.morisia.comparch.Architecture;
@@ -45,7 +46,9 @@ public class Trace_Constricted implements InjectionStrategy {
 	private List<Injection<? extends ArchitecturalElement>> createInjections(List<Integer> selectedShopIDs, List<String> componentsToUse){
         List<Injection<? extends ArchitecturalElement>> injections = new LinkedList<Injection<? extends ArchitecturalElement>>();
         for (Integer shopID : selectedShopIDs) {
-			Tenant tenant = this.eArchitecture.getTenants().get(shopID);
+        	List<Tenant> tenantList = this.eArchitecture.getTenants().stream().collect(Collectors.toList());
+        	tenantList.sort((Tenant t1, Tenant t2) -> t1.getName().compareTo(t2.getName()));
+			Tenant tenant = tenantList.get(shopID);
 			Component component = null;
 			while (component == null) {
 				int componentNumber = this.random.nextInt(tenant.getComponents().size());
