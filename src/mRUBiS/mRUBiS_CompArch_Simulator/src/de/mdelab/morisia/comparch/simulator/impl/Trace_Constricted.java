@@ -70,9 +70,9 @@ public class Trace_Constricted implements InjectionStrategy {
 		numberOfIssues = Math.min(Math.max(1, numberOfIssues), numberOfShops);
 		List<Integer> shopIDs = IntStream.range(0, numberOfShops).boxed().collect(Collectors.toList());
 		Collections.shuffle(shopIDs, this.random);
-		Integer numShopsGroup1 = (int) Math.min(numShopsGroup1, Math.floor(numberOfIssues / 2));
+		Integer numShopsGroup1 = (int) Math.min(this.shopIDsGroup1.size(), Math.floor(numberOfIssues / 2));
 		List<Integer> selectedShops1 = this.shopIDsGroup1.subList(0, numShopsGroup1);
-		List<Integer> selectedShops2 = this.shopIDsGroup2.subList(0, numberOfIssues - numShopsGroup1);
+		List<Integer> selectedShops2 = this.shopIDsGroup2.subList(0, numberOfIssues - numShopsGroup1 - 1);
 
 
         injections.addAll(this.createInjections(selectedShops1, componentsGroup1));
@@ -99,5 +99,11 @@ public class Trace_Constricted implements InjectionStrategy {
 				throw new RuntimeException(message);
 			}
 		}
+	}
+
+	@Override
+	public void setArchitecture(Architecture architecture) {
+		this.eArchitecture = architecture;
+		
 	}
 }
