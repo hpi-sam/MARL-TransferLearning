@@ -255,10 +255,10 @@ public class Task_1 {
 			else if (specificTrace) {
 				strategy = new Trace_SpecificComponent(architecture, injectionComponentName);
 			}
-			else if (true) {
+			else if (false) {
 				strategy = new Trace_AlternatingComponent(architecture, numEpisodes);
 			}
-			else if (constricted) {
+			else if (true) {
 				if (cg1 == null || cg2 == null || sg1 == null || sg2 == null) {
 					Random random = new Random();
 					List<String> comps = architecture.getTenants().get(0).getComponents().stream().map(e -> e.getType().getName()).collect(Collectors.toList());
