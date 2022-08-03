@@ -74,8 +74,14 @@ public class Trace_Constricted implements InjectionStrategy {
 		List<Integer> selectedShops1 = this.shopIDsGroup1.subList(0, numShopsGroup1);
 		List<Integer> selectedShops2 = this.shopIDsGroup2.subList(0, numberOfIssues - numShopsGroup1);
 
+
         injections.addAll(this.createInjections(selectedShops1, componentsGroup1));
         injections.addAll(this.createInjections(selectedShops2, componentsGroup2));
+
+		System.out.println("Injection into the following components: ");
+		for (Injection<? extends ArchitecturalElement> i : injections) {
+			System.out.println(i.getTarget().toString())
+		}
 		
 		return injections;
 	}
