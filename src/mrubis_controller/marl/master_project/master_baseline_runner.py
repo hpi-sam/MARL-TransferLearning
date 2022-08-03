@@ -1,7 +1,12 @@
+import math
 import wandb
+from entities.components import Components
 # from mrubis_controller.marl.mrubis_mock_env import MrubisMockEnv
 from marl.master_project.multi_agent_controller import MultiAgentController
 from marl.options import args
+import plotly.express as px
+
+from marl.utils import distance_rp_buffers
 
 
 class MasterBaselineRunner:
@@ -54,7 +59,10 @@ class MasterBaselineRunner:
             logs.append([])
             wandb.log({'episode': self.episode},
                       commit=False, step=self.step)
-
+            for shop_name, buffer in self.agent_controller.replay_buffers.items():
+                wandb.log({f'{shop_name} Conditional Probabilities': px.imshow(buffer.get_dist_probs()[0], text_auto=True, x=Components.value_list(), y=Components.value_list())}, step=step)
+            distances, buffer_names = distance_rp_buffers((agent.replay_buffers for agent in self.mac.agents))
+            wandb.log({f'Replay Buffer Distances': px.imshow(distances / math.sqrt(18**2), text_auto=True, x=buffer_names, y=buffer_names)}, step=self.step)
             while not terminated:
                 actions, regret, root_cause, probabilities = self.mac.select_actions(observations)
                 reward, observations_, terminated, env_info = self.env.step(actions)

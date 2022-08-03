@@ -86,13 +86,34 @@ class ReplayBuffer:
                     #p=(np.arange(len(self.observations)) + 1)/len(self.observations)
                 )
             indices = positive.iloc[indices_p].index.tolist() + negative.iloc[indices_n].index.tolist()
-            np.random.shuffle(indices)
-            indexed = self.state.iloc[indices]
+            if len(indices) == 0:
+                return None, None, None, None, None
+            np.random.default_rng().shuffle(indices)
+            indexed = self.state.loc[indices]
             return list(map(torch.stack, self._to_lists(indexed)))
+        raise NotImplementedError()
 
-    def get_batch(self, batch_size, random=True, balanced=False):
+    def positive_batch(self, batch_size, random=True):
+        positive = self.state[self.state["rewards"] > 0]
+        if len(positive) == 0:
+            return None, None, None, None, None
+        if random:
+            indices_p = np.random.choice(
+                    len(positive),
+                    min(batch_size, len(positive)),
+                    replace=False,
+                    #p=(np.arange(len(self.observations)) + 1)/len(self.observations)
+            )
+            np.random.shuffle(indices_p)
+            indexed = positive.iloc[indices_p]
+            return list(map(torch.stack, self._to_lists(indexed)))
+        raise NotImplementedError()
+
+    def get_batch(self, batch_size, random=True, positive=False, balanced=False):
         if len(self) == 0:
             return None, None, None, None, None
+        if positive:
+            return self.positive_batch(batch_size, random=random)
         if balanced:
             return self.balanced_batch(batch_size, random=random)
         if random:
