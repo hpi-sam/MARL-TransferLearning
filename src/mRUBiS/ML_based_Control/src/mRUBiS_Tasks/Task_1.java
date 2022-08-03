@@ -165,7 +165,7 @@ public class Task_1 {
 		boolean stdout = false;
 		final boolean useOptimization = true;
 		MLSDMInterpreter interpreter = EnvSetUp.getStoryDiagramInterpreter(stdout, useOptimization);		
-		
+		InjectionStrategy strategy = null;
 		int run = 0;
 		int episode = 0;
 		
@@ -236,7 +236,7 @@ public class Task_1 {
 					architecture, numEpisodes, episode, Level.CONFIG, logFile, logToConsole);
 			//InjectionStrategy strategy = new testTrace(simulator.getSupportedIssueTypes(), architecture);
 			//InjectionStrategy strategy = new Trace_Deterministic(simulator.getSupportedIssueTypes(), architecture);
-			InjectionStrategy strategy;
+			
 			if (multipleRootCauses) {
 				injectionComponentName = injectionComponentNames.get( episode % injectionComponentNames.size());
 				strategy = new Trace_SpecificComponent(architecture, injectionComponentName);
@@ -244,7 +244,7 @@ public class Task_1 {
 			else if (specificTrace) {
 				strategy = new Trace_SpecificComponent(architecture, injectionComponentName);
 			}
-			else if (alternatingTrace) {
+			else if (true) {
 				strategy = new Trace_AlternatingComponent(architecture, numEpisodes);
 			}
 			else {

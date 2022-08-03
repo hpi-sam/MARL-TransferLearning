@@ -3,6 +3,7 @@ package de.mdelab.morisia.comparch.simulator;
 import java.util.List;
 
 import de.mdelab.morisia.comparch.ArchitecturalElement;
+import de.mdelab.morisia.comparch.Architecture;
 
 /**
  * A strategy defining the injection of issues. A strategy specifies a scenario
@@ -12,6 +13,8 @@ import de.mdelab.morisia.comparch.ArchitecturalElement;
  * @version 0.30
  */
 public interface InjectionStrategy {
+
+	public void setArchitecture(Architecture architecture);
 
 	/**
 	 * For each simulation run, the simulator consults the strategy to obtain

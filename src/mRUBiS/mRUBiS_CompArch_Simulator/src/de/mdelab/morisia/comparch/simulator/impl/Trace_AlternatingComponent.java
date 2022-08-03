@@ -22,10 +22,14 @@ public class Trace_AlternatingComponent implements InjectionStrategy {
 
 	private IssueType[] issueTypes;
 	private Architecture eArchitecture;
-	private Random random = new Random();
+	private Random random = new Random(200);
     private int totalEpisodes;
     private List<List<Component>> injectionTargets;
 
+    public void setArchitecture(Architecture architecture) {
+		this.eArchitecture = architecture;
+	}
+    
 	public Trace_AlternatingComponent(Architecture eArchitecture, int totalEpisodes) {
 		this.eArchitecture = eArchitecture;
 		this.totalEpisodes = totalEpisodes;
@@ -58,7 +62,7 @@ public class Trace_AlternatingComponent implements InjectionStrategy {
             this.injectionTargets.get(1).add(c2);
 		}
 
-        for (int i = middle + 1; i < shopIDs.size(); i++) {
+        for (int i = middle; i < shopIDs.size(); i++) {
 			Integer shopID = shopIDs.get(i);
 			Tenant tenant = this.eArchitecture.getTenants().get(shopID);
 			Component c1 = tenant.getComponents().stream().filter(c -> c.getType().getName().equals(c1TypeName)).collect(Collectors.toList()).get(0);
@@ -66,12 +70,13 @@ public class Trace_AlternatingComponent implements InjectionStrategy {
             this.injectionTargets.get(1).add(c2);
             this.injectionTargets.get(0).add(c2);
 		}
-
+        System.out.println("Group 1");
         for(Component comp : this.injectionTargets.get(0)) {
-            System.out.println(comp);
+            System.out.println(comp.getType().getName());
         }
+        System.out.println("Group 2");
         for(Component comp : this.injectionTargets.get(1)) {
-            System.out.println(comp);
+            System.out.println(comp.getType().getName());
         }
 
     }

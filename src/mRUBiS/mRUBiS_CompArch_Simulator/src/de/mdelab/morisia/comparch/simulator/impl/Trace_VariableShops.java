@@ -18,7 +18,7 @@ import de.mdelab.morisia.comparch.simulator.IssueType;
 public class Trace_VariableShops implements InjectionStrategy {
 
 	private IssueType[] issueTypes;
-	private Architecture eArchitecture;
+	public Architecture eArchitecture;
 	private double mean;
 	private double variance;
 	private Random random;

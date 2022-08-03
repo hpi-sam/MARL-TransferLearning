@@ -21,6 +21,10 @@ public class Trace_SpecificComponent implements InjectionStrategy {
 		this.componentName = componentName;
 	}
 	
+	public void setArchitecture(Architecture architecture) {
+		this.eArchitecture = architecture;
+	}
+	
 	@Override
 	public List<Injection<? extends ArchitecturalElement>> getInjections(int runCount) {
 		List<Injection<? extends ArchitecturalElement>> injections = new LinkedList<Injection<? extends ArchitecturalElement>>();
