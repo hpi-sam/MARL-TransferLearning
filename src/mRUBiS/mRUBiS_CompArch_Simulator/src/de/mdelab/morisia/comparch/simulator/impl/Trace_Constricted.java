@@ -54,6 +54,7 @@ public class Trace_Constricted implements InjectionStrategy {
 					component = null;
 				}
 			}
+			System.out.println(component.getType().getName());
 			injections.add(new Injection<Component>(IssueType.CF3, component));
 		}	
         return injections;	
@@ -63,6 +64,7 @@ public class Trace_Constricted implements InjectionStrategy {
 	public List<Injection<? extends ArchitecturalElement>> getInjections(int runCount) {
 		List<Injection<? extends ArchitecturalElement>> injections = new LinkedList<Injection<? extends ArchitecturalElement>>();
 
+		System.out.println("Injection into the following components: ");
 //		this.random = new Random(this.eArchitecture.getTenants().size() * 10 + (runCount % 10));
 		this.random = new Random(runCount);
 		int numberOfShops = this.eArchitecture.getTenants().size();
@@ -77,11 +79,6 @@ public class Trace_Constricted implements InjectionStrategy {
 
         injections.addAll(this.createInjections(selectedShops1, componentsGroup1));
         injections.addAll(this.createInjections(selectedShops2, componentsGroup2));
-
-		System.out.println("Injection into the following components: ");
-		for (Injection<? extends ArchitecturalElement> i : injections) {
-			System.out.println(i.getTarget().toString())
-		}
 		
 		return injections;
 	}
