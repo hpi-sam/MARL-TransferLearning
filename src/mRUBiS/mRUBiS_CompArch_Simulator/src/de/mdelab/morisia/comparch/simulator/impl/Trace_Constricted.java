@@ -27,9 +27,10 @@ public class Trace_Constricted implements InjectionStrategy {
 	private List<String> componentsGroup2;
 	private List<Integer> shopIDsGroup1;
 	private List<Integer> shopIDsGroup2;
+	private Integer numEpisodes;
 
 	public Trace_Constricted(IssueType[] issueTypes, Architecture eArchitecture, double mean, double variance,
-		List<String> cg1, List<String> cg2, List<Integer> sg1, List<Integer> sg2) {
+		List<String> cg1, List<String> cg2, List<Integer> sg1, List<Integer> sg2, Integer numEpisodes) {
 		this.issueTypes = issueTypes;
 		this.eArchitecture = eArchitecture;
 		this.mean = mean;
@@ -38,6 +39,7 @@ public class Trace_Constricted implements InjectionStrategy {
         this.componentsGroup2 = cg2;
 		this.shopIDsGroup1 = sg1;
 		this.shopIDsGroup2 = sg2;
+		this.numEpisodes = numEpisodes;
 	}
 
 	private List<Injection<? extends ArchitecturalElement>> createInjections(List<Integer> selectedShopIDs, List<String> componentsToUse){
@@ -76,9 +78,14 @@ public class Trace_Constricted implements InjectionStrategy {
 		List<Integer> selectedShops1 = this.shopIDsGroup1.subList(0, numShopsGroup1);
 		List<Integer> selectedShops2 = this.shopIDsGroup2.subList(0, numberOfIssues - numShopsGroup1 - 1);
 
+		if(runCount < this.numEpisodes / 2) {
+			injections.addAll(this.createInjections(selectedShops1, componentsGroup1));
+			injections.addAll(this.createInjections(selectedShops2, componentsGroup2));
+		} else {
+			injections.addAll(this.createInjections(selectedShops1, componentsGroup2));
+			injections.addAll(this.createInjections(selectedShops2, componentsGroup1));
+		}
 
-        injections.addAll(this.createInjections(selectedShops1, componentsGroup1));
-        injections.addAll(this.createInjections(selectedShops2, componentsGroup2));
 		
 		return injections;
 	}

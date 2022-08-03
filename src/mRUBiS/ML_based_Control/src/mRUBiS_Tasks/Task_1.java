@@ -270,7 +270,7 @@ public class Task_1 {
 					sg1 = shopIDs.subList(0, shopIDs.size() / 2);
 					sg2 = shopIDs.subList((shopIDs.size() / 2) + 1, shopIDs.size());
 				}
-				strategy = new Trace_Constricted(simulator.getSupportedIssueTypes(), architecture, injectionMean, injectionVariance, cg1, cg2, sg1, sg2);
+				strategy = new Trace_Constricted(simulator.getSupportedIssueTypes(), architecture, injectionMean, injectionVariance, cg1, cg2, sg1, sg2, numEpisodes);
 			}
 			else {
 				strategy = new Trace_VariableShops(simulator.getSupportedIssueTypes(), architecture, injectionMean, injectionVariance);
