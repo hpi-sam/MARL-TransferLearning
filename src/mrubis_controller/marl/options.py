@@ -16,4 +16,5 @@ parser.add_argument("--balanced-sampling", action="store_true", help="Balance po
 parser.add_argument("--wandb", action="store_true", help="Log with wandb")
 parser.add_argument("--on-policy", action="store_true", help="Enable on policy training.")
 parser.add_argument("--on-off-policy", action="store_true", help="Enable on-off policy training.")
+parser.add_argument("--use-exploration", action="store_true", default=False, help="Use exploration with guard for the master project agent" )
 args = parser.parse_args()

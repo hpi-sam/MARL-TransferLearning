@@ -151,3 +151,7 @@ class MultiAgentController:
             )
             for index, shops in enumerate(self.shop_distribution)
         ]
+
+    def reset_sampled_actions_mem(self):
+        for agent in self.agents:
+            agent.reset_sampled_actions_mem()

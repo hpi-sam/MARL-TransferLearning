@@ -1,5 +1,6 @@
 # follows https://dev.to/jemaloqiu/reinforcement-learning-with-tf2-and-gym-actor-critic-3go5
 from select import select
+from typing import Dict
 import numpy
 import numpy as np
 import torch
@@ -12,6 +13,7 @@ from entities.component_failure import ComponentFailure
 from entities.observation import ShopObservation, SystemObservation
 from marl.master_project.actor_critic import A2CNet
 from marl.replay_buffer import ReplayBuffer
+from marl.options import args
 
 
 def _decoded_action(action, observation):
@@ -80,6 +82,22 @@ class Agent:
             self.ridge_regression_train_data_path)
         self.memory = {}
         self.previous_actions = {}
+        self.sampled_actions: Dict[str, 'list[int]'] = {}
+
+    def sample_random_action(self, shop_name, probabilities):
+        p = probabilities.copy()
+        p_new = p
+        if shop_name in self.sampled_actions.keys():
+            total = np.float64(0)
+            for action in self.sampled_actions[shop_name]:
+                print(p[action])
+                total += p[action]
+                p[action] = 0
+            c =  len(p) - len(self.sampled_actions[shop_name])
+            indices = [i for i in range(0, len(p)) if i not in self.sampled_actions[shop_name]]
+            np.add.at(p_new, indices, total/c)
+        
+        return np.random.choice([i for i in range(0, len(p_new))], 1, p=p_new)
 
     def choose_action(self, observations):
         """ chooses actions based on observations
@@ -99,10 +117,23 @@ class Agent:
                 probabilities, _ = self.model(state_tensor)
                 probabilities = probabilities.detach().numpy()[0]
                 action_probabilities[shop_name] = probabilities
-                self.choose_from_memory(
-                    state, shop_name, components)
-                action = numpy.argmax(probabilities)
+
+                if args.use_exploration:
+                    action = self.sample_random_action(shop_name, probabilities).item()
+                    if shop_name in self.sampled_actions.keys():
+                        while action in self.sampled_actions[shop_name]:
+                            print(self.sampled_actions[shop_name])
+                            action = self.sample_random_action(shop_name, probabilities).item()
+                        self.sampled_actions[shop_name].append(action)
+                    else:
+                        self.sampled_actions[shop_name] = [action]
+                else:
+                    self.choose_from_memory(
+                        state, shop_name, components)
+                    action = numpy.argmax(probabilities)
+                
                 probability = probabilities[action]
+
                 root_cause_index, root_cause_name = get_root_cause(components)
                 regret = 1.0 - probabilities[root_cause_index]
                 decoded_action = _decoded_action(action, observations)
@@ -128,6 +159,7 @@ class Agent:
             probabilities, _ = self.model(state_tensor)
             probabilities = probabilities.detach().numpy()[0]
             action = numpy.argmax(probabilities)
+
             probability = probabilities[action]
             probabilities[action] = 0
             self.previous_actions[shop_name] = probabilities
@@ -305,6 +337,9 @@ class Agent:
 
     def add_shops(self, shops):
         self.shops = self.shops.union(shops)
+
+    def reset_sampled_actions_mem(self):
+        self.sampled_actions = {}
 
     def add_to_replay_buffer(self, states, probabilites, actions, reward, next_states, dones):
         for action_idx, action in actions.items():

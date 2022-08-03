@@ -83,5 +83,8 @@ class MasterBaselineRunner:
                         if count != -1:
                             wandb.log({f"Fixed_{shop}": count},
                                       step=self.step)
+            
+            if args.use_exploration:
+                self.mac.reset_sampled_actions_mem()
             self.episode += 1
             print(f"episode {self.episode} done")
