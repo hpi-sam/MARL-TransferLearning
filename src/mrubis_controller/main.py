@@ -16,11 +16,11 @@ class MrubisStarter:
     def __enter__(self):
         print("Starting mRUBiS")
         os.system(
-            "tmux new-session -d -s mrubis -n mrubis 'CWD=$(pwd) && cd ../mRUBiS/ML_based_Control/ && java -jar mRUBiS.jar > ${CWD}/mrubis.log'")
+            f"MRUBIS_PORT={int(os.getenv('MRUBIS_PORT', 8080))} tmux new-session -d -s mrubis{int(os.getenv('MRUBIS_PORT', 8080))} -n mrubis 'CWD=$(pwd) && cd ../mRUBiS/ML_based_Control/ && java -jar mRUBiS.jar > ${{CWD}}/mrubis.log'")
 
     def __exit__(self, exc_type, exc_value, traceback):
         print("Closing mRUBiS")
-        os.system("tmux kill-session -t mrubis")
+        os.system(f"tmux kill-session -t mrubis{int(os.getenv('MRUBIS_PORT', 8080))}")
 
 
 def main():
@@ -30,9 +30,9 @@ def main():
     with MrubisStarter():
         sleep(2)
         wandb.init(project="mrubis_test", entity="mrubis",
-                   mode="online" if args.wandb else "disabled")
+                   mode="online" if args.wandb else "disabled", config=args)
 
-        episodes = 200
+        episodes = args.episodes
         num_shops = 10
         env = MrubisEnv(
             episodes=episodes,

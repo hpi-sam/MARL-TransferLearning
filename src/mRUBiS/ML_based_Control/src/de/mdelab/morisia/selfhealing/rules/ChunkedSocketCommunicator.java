@@ -18,7 +18,7 @@ import mRUBiS.Observations.Observations;
 public class ChunkedSocketCommunicator {
 	
 	// Open up the socket
-	private static int port = 8080;
+	private static int port = Integer.parseInt(System.getenv("MRUBIS_PORT"));
 	
 	private static ServerSocket server;
 	private static Socket client;

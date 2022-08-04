@@ -1,5 +1,8 @@
 import math
 from typing import List, Tuple
+import torch
+import torch.nn.functional as F
+from torch.utils.data import DataLoader
 import wandb
 from entities.components import Components
 from marl.master_project.agent import Agent
@@ -55,7 +58,8 @@ class MasterBaselineRunner:
         return sorted_agents[:int(len(agents) / 2)], sorted_agents[int(len(agents) / 2):]
 
     def transfer_knowledge_pairwise(self, pairs: List[Tuple[Agent]]):
-        print("pairs", pairs)
+        if args.transfer_strategy == "off":
+            return
         for pair in pairs:
             print("======== TRANSFERING KNOWLEDGE =========")
             if args.transfer_strategy == "replace":
@@ -64,6 +68,9 @@ class MasterBaselineRunner:
             elif args.transfer_strategy == "combine":
                 self.transfer_knowledge_combine(*pair)
                 self.knowledge_retrain(pair[1])
+            elif args.transfer_strategy == "knowledge_destillation":
+                self.transfer_knowledge_combine(*pair)
+                self.knowledge_destillation(*pair)
         
     def transfer_knowledge_replace(self, source: Agent, target: Agent):
         source_replay_buffer = next(iter(source.replay_buffers.values()))
@@ -79,8 +86,24 @@ class MasterBaselineRunner:
         target_replay_buffer.set_state(*combined_state)
     
     def knowledge_retrain(self, agent: Agent):
-        pass
+        for _ in range(args.n_retrain):
+            if args.retrain_cat:
+                agent.retrain_off_policy_cat(args.batch_size)
+            else:
+                agent.retrain_off_policy(args.batch_size)
 
+    def knowledge_destillation(self, source: Agent, target: Agent):
+        source_replay_buffer = next(iter(source.replay_buffers.values()))
+        observations = source_replay_buffer.get_state()[0]
+        dataloader = DataLoader(observations, batch_size=args.batch_size)
+        for _ in range(args.n_retrain):
+            for observations in dataloader:
+                with torch.no_grad():
+                    source_output = source.model(observations)[0]
+                target.model.actor_optimizer.zero_grad()
+                target_output = target.model(observations)[0]
+                F.cross_entropy(target_output, source_output).backward()
+                target.model.actor_optimizer.step()
     def run(self, episodes):
         """ runs the simulation """
         rewards = []
@@ -140,7 +163,6 @@ class MasterBaselineRunner:
                         if count != -1:
                             wandb.log({f"Fixed_{shop}": count},
                                       step=self.step)
-            
             if args.use_exploration:
                 self.mac.reset_sampled_actions_mem()
             self.episode += 1

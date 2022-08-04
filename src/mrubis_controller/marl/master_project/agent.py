@@ -1,9 +1,7 @@
 # follows https://dev.to/jemaloqiu/reinforcement-learning-with-tf2-and-gym-actor-critic-3go5
-from select import select
 from typing import Dict
 import numpy
 import numpy as np
-from sqlalchemy import true
 import torch
 import torch.nn.functional as F
 from entities.components import Components
@@ -247,6 +245,42 @@ class Agent:
         loss = torch.sum(-(p_old_new / p_old) * torch.pow(torch.sum(torch.abs(value_o_t - y)), 2))
         return loss
 
+    def off_policy_losses_policy_gradient(self, batch_observation, batch_action, batch_selected_action, batch_rewards, batch_next_observation):
+        y_pred_batch, _ = self.model(batch_observation)
+        y_pred_batch = torch.clip(y_pred_batch, 1e-8, 1 - 1e-8)
+        # COMPUTE ACTOR OFF POLICY LOSS
+        p_old_new = y_pred_batch.gather(1, batch_selected_action.unsqueeze(-1))
+        #actor_on_loss = -torch.log(y_pred.gather(1, selected_action.unsqueeze(-1))) * (reward + 0.99 * next_expected_reward - expected_reward)
+        actor_off_loss = torch.mean(-torch.log(p_old_new) * batch_rewards)
+        return actor_off_loss
+    
+    def off_policy_losses_policy_gradient_cat(self, batch_observation: torch.Tensor, batch_action, batch_selected_action, batch_rewards, batch_next_observation):
+        y_pred_batch, _ = self.model(batch_observation)
+        correct_actions = F.one_hot(batch_selected_action, num_classes=batch_action.size(1)).float()
+        return F.cross_entropy(y_pred_batch, correct_actions)
+
+    def retrain_off_policy(self, batch_size: int = 1):
+        """ network learns to improve """
+        for shop_name in self.shops:
+            observations, actions, selected_actions, rewards, next_observations  = self.replay_buffers[shop_name].get_batch(batch_size, random=not args.disable_random_batch, balanced=args.balanced_sampling, positive=args.positive_sampling)
+            if observations is None:
+                continue
+            self.model.actor_optimizer.zero_grad()
+            actor_loss = self.off_policy_losses_policy_gradient(observations, actions, selected_actions, rewards, next_observations)
+            actor_loss.backward()
+            self.model.actor_optimizer.step()
+    
+    def retrain_off_policy_cat(self, batch_size: int = 1):
+        """ network learns to improve """
+        for shop_name in self.shops:
+            observations, actions, selected_actions, rewards, next_observations  = self.replay_buffers[shop_name].get_batch(batch_size, random=not args.disable_random_batch, balanced=False, positive=True)
+            if observations is None:
+                continue
+            self.model.actor_optimizer.zero_grad()
+            actor_loss = self.off_policy_losses_policy_gradient_cat(observations, actions, selected_actions, rewards, next_observations)
+            actor_loss.backward()
+            self.model.actor_optimizer.step()
+
     def learn_off_policy(self, batch_size: int = 1):
         """ network learns to improve """
         metrics = []
@@ -351,7 +385,14 @@ class Agent:
         p_old = batch_action.gather(1, batch_selected_action.unsqueeze(-1))
         p_old_new = y_pred_batch.gather(1, batch_selected_action.unsqueeze(-1))
         #actor_on_loss = -torch.log(y_pred.gather(1, selected_action.unsqueeze(-1))) * (reward + 0.99 * next_expected_reward - expected_reward)
-        actor_off_loss = torch.mean(-torch.log(p_old_new) * batch_rewards)
+        if args.off_policy_loss_cat:
+            indices = torch.where(batch_rewards > 0)[0]
+            y_pred_batch_pos = y_pred_batch[indices]
+            batch_selected_action_pos = batch_selected_action[indices]
+            correct_actions = F.one_hot(batch_selected_action_pos, num_classes=batch_action.size(1)).float()
+            actor_off_loss = F.cross_entropy(y_pred_batch_pos, correct_actions)
+        else:
+            actor_off_loss = torch.mean(-torch.log(p_old_new) * batch_rewards)
         return actor_on_loss + args.off_policy_factor * actor_off_loss
 
     def learn_on_off_policy(self, states, selected_action, reward, states_, dones, batch_size: int = 1):
@@ -382,7 +423,7 @@ class Agent:
                 critic_loss.backward()
                 self.model.critic_optimizer.step()
                 continue
-            policy_gradient = true
+            policy_gradient = True
             if policy_gradient:
                 self.model.actor_optimizer.zero_grad()
                 actor_loss = self.on_off_policy_losses_policy_gradient(shop_state, shop_selected_action, shop_reward, shop_next_state, batch_observations, batch_actions, batch_selected_actions, batch_rewards, batch_next_observations)
@@ -390,7 +431,7 @@ class Agent:
                 self.model.actor_optimizer.step()
                 critic_loss = 0
             else:
-                optimized_loss = true
+                optimized_loss = True
                 if optimized_loss:
                     self.model.critic_optimizer.zero_grad()
                     self.model.actor_optimizer.zero_grad()

@@ -1,5 +1,6 @@
 import json
 import logging
+import os
 import socket
 from json.decoder import JSONDecodeError
 from time import sleep
@@ -7,6 +8,7 @@ from time import sleep
 
 class ChunkedSocketCommunicator(object):
     def __init__(self, host='localhost', port=8080):
+        port = int(os.getenv("MRUBIS_PORT", port))
         self.host = host
         self.port = port
         self.socket = None
