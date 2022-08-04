@@ -32,7 +32,7 @@ def main():
         wandb.init(project="mrubis_test", entity="mrubis",
                    mode="online" if args.wandb else "disabled")
 
-        episodes = 10
+        episodes = 200
         num_shops = 10
         env = MrubisEnv(
             episodes=episodes,

@@ -10,10 +10,9 @@ from marl.master_project.robustness_component import RobustnessComponent
 class MultiAgentController:
     def __init__(self, load_models_data, robustness_activated=False):
         # list of named shops per agent identified by the index
-        self.shop_distribution = [{'mRUBiS #1', 'mRUBiS #2', 'mRUBiS #3', 'mRUBiS #4', 'mRUBiS #5'},
-                                   {'mRUBiS #6', 'mRUBiS #7', 'mRUBiS #8', 'mRUBiS #9', 'mRUBiS #10'}]
+        self.shop_distribution = [{f'mRUBiS #{i}'} for i in range(1,11)]
         self.load_models_data = load_models_data
-        self.rank_learner = RankLearner(0, None)
+        self.rank_learner = RankLearner(1, None)
         self.agents: List[Agent] = []
         self.ridge_regression_train_data_path = Path(
             './data/TrainingmRUBiS_Theta0.05_NonStationary.csv')

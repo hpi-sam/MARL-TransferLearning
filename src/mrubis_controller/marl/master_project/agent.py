@@ -110,6 +110,8 @@ class Agent:
         root_causes = {}
         action_probabilities = {}
         for shop_name, components in observations.items():
+            if shop_name not in self.shops:
+                continue
             regret = None
             state = encode_observations(components)[np.newaxis, :]
             state_tensor = torch.from_numpy(state).float()

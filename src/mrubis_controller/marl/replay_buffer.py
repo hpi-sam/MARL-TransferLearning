@@ -8,7 +8,7 @@ from entities.components import Components
 
 class ReplayBuffer:
     def __init__(self, max_size = -1):
-        self.state = pandas.DataFrame(columns=["observations", "actions", "selected_actios", "rewards", "next_observations"])
+        self.state = pandas.DataFrame(columns=["observations", "actions", "selected_actions", "rewards", "next_observations"])
         self.max_size = max_size
         self.components = Components.value_list()
         self.dist = torch.zeros((len(self.components), len(self.components)))
@@ -38,7 +38,7 @@ class ReplayBuffer:
         return self._to_lists(self.state)
 
     def set_state(self, observations, actions, selected_actions, rewards, next_observations):
-        self.state = pandas.DataFrame(columns=["observations", "actions", "selected_actios", "rewards", "next_observations"])
+        self.state = pandas.DataFrame(columns=["observations", "actions", "selected_actions", "rewards", "next_observations"])
         self.state["observations"] = observations
         self.state["actions"] = actions
         self.state["selected_actions"] = selected_actions
