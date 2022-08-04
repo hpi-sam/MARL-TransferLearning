@@ -48,6 +48,7 @@ public class Trace_Constricted implements InjectionStrategy {
         for (Integer shopID : selectedShopIDs) {
         	List<Tenant> tenantList = this.eArchitecture.getTenants().stream().collect(Collectors.toList());
         	tenantList.sort((Tenant t1, Tenant t2) -> t1.getName().compareTo(t2.getName()));
+        	System.out.println(tenantList);
 			Tenant tenant = tenantList.get(shopID);
 			Component component = null;
 			while (component == null) {
@@ -74,12 +75,11 @@ public class Trace_Constricted implements InjectionStrategy {
 		this.random = new Random(runCount);
 		int numberOfShops = this.eArchitecture.getTenants().size();
 		int numberOfIssues = numberOfShops;
-		numberOfIssues = Math.min(Math.max(1, numberOfIssues), numberOfShops);
 		List<Integer> shopIDs = IntStream.range(0, numberOfShops).boxed().collect(Collectors.toList());
 		Collections.shuffle(shopIDs, this.random);
 		Integer numShopsGroup1 = (int) Math.min(this.shopIDsGroup1.size(), Math.floor(numberOfIssues / 2));
 		List<Integer> selectedShops1 = this.shopIDsGroup1.subList(0, numShopsGroup1);
-		List<Integer> selectedShops2 = this.shopIDsGroup2.subList(0, numberOfIssues - numShopsGroup1 - 1);
+		List<Integer> selectedShops2 = this.shopIDsGroup2.subList(0, numberOfIssues - numShopsGroup1);
 
 		if(runCount < this.numEpisodes / 2) {
 			injections.addAll(this.createInjections(selectedShops1, componentsGroup1));

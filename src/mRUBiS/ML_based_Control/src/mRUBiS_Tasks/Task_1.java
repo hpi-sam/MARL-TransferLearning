@@ -264,11 +264,13 @@ public class Task_1 {
 					List<String> comps = architecture.getTenants().get(0).getComponents().stream().map(e -> e.getType().getName()).collect(Collectors.toList());
 					Collections.shuffle(comps, random);
 					cg1 = comps.subList(0, comps.size() / 2);
-					cg2 = comps.subList((comps.size() / 2) + 1, comps.size());
+					cg2 = comps.subList((comps.size() / 2), comps.size());
+					cg1 = comps.subList(0, 2);
+					cg2 = comps.subList(2, 4);
 					List<Integer> shopIDs = IntStream.range(0, architecture.getTenants().size()).boxed().collect(Collectors.toList());
 					// Collections.shuffle(shopIDs, random);
 					sg1 = shopIDs.subList(0, shopIDs.size() / 2);
-					sg2 = shopIDs.subList((shopIDs.size() / 2) + 1, shopIDs.size());
+					sg2 = shopIDs.subList((shopIDs.size() / 2), shopIDs.size());
 				}
 				strategy = new Trace_Constricted(simulator.getSupportedIssueTypes(), architecture, injectionMean, injectionVariance, cg1, cg2, sg1, sg2, numEpisodes);
 			}

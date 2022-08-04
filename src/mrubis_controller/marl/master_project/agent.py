@@ -339,7 +339,9 @@ class Agent:
 
     def on_off_policy_losses_policy_gradient(self, observation, selected_action, reward, next_observation, batch_observation, batch_action, batch_selected_action, batch_rewards, batch_next_observation):
         y_pred, _ = self.model(observation)
+        y_pred = torch.clip(y_pred, 1e-8, 1 - 1e-8)
         y_pred_batch, _ = self.model(batch_observation)
+        y_pred_batch = torch.clip(y_pred_batch, 1e-8, 1 - 1e-8)
         _actions = torch.zeros([1, self.n_actions])
         _actions[:, selected_action] = 1.0
         out = torch.clip(y_pred, 1e-8, 1 - 1e-8)
@@ -349,7 +351,7 @@ class Agent:
         p_old = batch_action.gather(1, batch_selected_action.unsqueeze(-1))
         p_old_new = y_pred_batch.gather(1, batch_selected_action.unsqueeze(-1))
         #actor_on_loss = -torch.log(y_pred.gather(1, selected_action.unsqueeze(-1))) * (reward + 0.99 * next_expected_reward - expected_reward)
-        actor_off_loss = -torch.mean((p_old_new / p_old) * torch.log(p_old_new) * batch_rewards)
+        actor_off_loss = torch.mean(-torch.log(p_old_new) * batch_rewards)
         return actor_on_loss + args.off_policy_factor * actor_off_loss
 
     def learn_on_off_policy(self, states, selected_action, reward, states_, dones, batch_size: int = 1):
