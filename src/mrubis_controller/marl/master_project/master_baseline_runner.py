@@ -118,12 +118,12 @@ class MasterBaselineRunner:
             wandb.log({'episode': self.episode},
                       commit=False, step=self.step)
             all_replay_buffers = {}
-            for agent in self.mac.agents:
-                all_replay_buffers = {**all_replay_buffers, **agent.replay_buffers}
-                for shop_name, buffer in agent.replay_buffers.items():
-                    wandb.log({f'{shop_name} Conditional Probabilities': px.imshow(buffer.get_dist_probs()[0].numpy(), text_auto=True, x=Components.value_list(), y=Components.value_list())}, step=self.step)
-            distances, buffer_names = distance_rp_buffers(all_replay_buffers)
-            wandb.log({f'Replay Buffer Distances': px.imshow((distances / math.sqrt(18**2)).numpy(), text_auto=True, x=buffer_names, y=buffer_names)}, step=self.step)
+            # for agent in self.mac.agents:
+            #     all_replay_buffers = {**all_replay_buffers, **agent.replay_buffers}
+            #     for shop_name, buffer in agent.replay_buffers.items():
+            #         wandb.log({f'{shop_name} Conditional Probabilities': px.imshow(buffer.get_dist_probs()[0].numpy(), text_auto=True, x=Components.value_list(), y=Components.value_list())}, step=self.step)
+            # distances, buffer_names = distance_rp_buffers(all_replay_buffers)
+            # wandb.log({f'Replay Buffer Distances': px.imshow((distances / math.sqrt(18**2)).numpy(), text_auto=True, x=buffer_names, y=buffer_names)}, step=self.step)
             if self.episode == math.ceil(episodes / 2):
                 group1, group2 = self.get_groups(self.mac.agents)
                 print("group1: ", group1)
