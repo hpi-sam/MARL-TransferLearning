@@ -87,10 +87,10 @@ class ReplayBufferRunner:
                 current_observations = self.env.reset()
                 self.agent_controller.reset_shield()
                 self.agent_controller.handle_episode_observation(current_observations)
-                for shop_name, buffer in self.agent_controller.replay_buffers.items():
-                    wandb.log({f'{shop_name} Conditional Probabilities': px.imshow(buffer.get_dist_probs()[0], text_auto=True, x=Components.value_list(), y=Components.value_list())}, step=step)
-                distances, buffer_names = distance_rp_buffers(self.agent_controller.replay_buffers)
-                wandb.log({f'Replay Buffer Distances': px.imshow(distances / math.sqrt(18**2), text_auto=True, x=buffer_names, y=buffer_names)}, step=step)
+                # for shop_name, buffer in self.agent_controller.replay_buffers.items():
+                #     wandb.log({f'{shop_name} Conditional Probabilities': px.imshow(buffer.get_dist_probs()[0], text_auto=True, x=Components.value_list(), y=Components.value_list())}, step=step)
+                # distances, buffer_names = distance_rp_buffers(self.agent_controller.replay_buffers)
+                # wandb.log({f'Replay Buffer Distances': px.imshow(distances / math.sqrt(18**2), text_auto=True, x=buffer_names, y=buffer_names)}, step=step)
                 while not terminated:
                     bar()
                     bar.text = f"Episode: {episode} Step: {step}"

@@ -16,7 +16,7 @@ class MrubisStarter:
     def __enter__(self):
         print("Starting mRUBiS")
         os.system(
-            f"MRUBIS_PORT={int(os.getenv('MRUBIS_PORT', 8080))} tmux new-session -d -s mrubis{int(os.getenv('MRUBIS_PORT', 8080))} -n mrubis 'CWD=$(pwd) && cd ../mRUBiS/ML_based_Control/ && java -jar mRUBiS.jar > ${{CWD}}/mrubis.log'")
+            f"tmux new-session -d -s mrubis{int(os.getenv('MRUBIS_PORT', 8080))} -n mrubis 'MRUBIS_PORT={int(os.getenv('MRUBIS_PORT', 8080))}  CWD=$(pwd) && cd ../mRUBiS/ML_based_Control/ && java -jar mRUBiS.jar > ${{CWD}}/mrubis.log'")
 
     def __exit__(self, exc_type, exc_value, traceback):
         print("Closing mRUBiS")
@@ -29,7 +29,7 @@ def main():
             "Specify exactly one runner type. See main.py -h for help.")
     with MrubisStarter():
         sleep(2)
-        wandb.init(project="mrubis_test", entity="mrubis",
+        wandb.init(project="sweep", entity="mrubis",
                    mode="online" if args.wandb else "disabled", config=args)
 
         episodes = args.episodes

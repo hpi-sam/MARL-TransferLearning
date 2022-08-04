@@ -22,6 +22,7 @@ class ChunkedSocketCommunicator(object):
     def _start_mrubis(self):
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sleep(1)
+        print("CONNECTING TO ", self.host, self.port)
         self.socket.connect((self.host, self.port))
         self.logger.info('Connected to the Java side.')
 
