@@ -112,6 +112,8 @@ class MasterBaselineRunner:
                 self.transfer_knowledge_pairwise(pairs)
             while not terminated:
                 actions, regret, root_cause, probabilities = self.mac.select_actions(observations)
+                print("Actions:")
+                print(actions)
                 reward, observations_, terminated, env_info = self.env.step(actions)
                 if actions is not None:
                     rewards.append(reward)
