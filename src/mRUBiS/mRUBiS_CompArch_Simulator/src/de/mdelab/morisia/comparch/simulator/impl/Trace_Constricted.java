@@ -86,7 +86,7 @@ public class Trace_Constricted implements InjectionStrategy {
 			injections.addAll(this.createInjections(selectedShops2, componentsGroup2));
 		} else {
 			injections.addAll(this.createInjections(selectedShops1, componentsGroup2));
-			injections.addAll(this.createInjections(selectedShops2, componentsGroup1));
+			injections.addAll(this.createInjections(selectedShops2, componentsGroup2));
 		}
 
 		
