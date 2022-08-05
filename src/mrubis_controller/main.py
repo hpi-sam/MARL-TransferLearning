@@ -28,7 +28,7 @@ def main():
         raise Exception(
             "Specify exactly one runner type. See main.py -h for help.")
     with MrubisStarter():
-        sleep(60)
+        sleep(45)
         wandb.init(project="sweep", entity="mrubis",
                    mode="online" if args.wandb else "disabled", config=args)
 
