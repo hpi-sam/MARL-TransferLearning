@@ -1,4 +1,5 @@
 import math
+import os
 from typing import List, Tuple
 import torch
 import torch.nn.functional as F
@@ -10,7 +11,7 @@ from marl.master_project.agent import Agent
 from marl.master_project.multi_agent_controller import MultiAgentController
 from marl.options import args
 import plotly.express as px
-
+import numpy as np
 from marl.utils import distance_rp_buffers
 
 
@@ -32,7 +33,17 @@ class MasterBaselineRunner:
                                  65: None, 66: None, 67: None, 68: None, 69: None,
                                  70: None, 71: None, 72: None, 73: None, 74: None,
                                  75: None, 76: None, 77: None, 78: None, 79: None}
+        self.columns = ['episodes', 'shop_1', 'shop_2', 'shop_3', 'shop_4', 'shop_5', 'shop_6', 'shop_7', 'shop_8', 'shop_9', 'shop_10',
+                        'off_policy_factor', 'transfer_strategy', 'off_policy_loss_cat', 'retrain_cat', 'n_retrain', 'batch_size', 'sampling', 'use_exploration']
         # self.shop_distribution =
+        if args.positive_sampling:
+            sampling = "positive"
+        elif args.balanced_sampling:
+            sampling = "balanced"
+        else:
+            sampling = False
+        self.options = [args.off_policy_factor, args.transfer_strategy, args.off_policy_loss_cat,
+                        args.retrain_cat, args.n_retrain, args.batch_size, sampling, args.use_exploration]
         self.env = env
 
         self.mac = MultiAgentController(
@@ -71,20 +82,21 @@ class MasterBaselineRunner:
             elif args.transfer_strategy == "knowledge_destillation":
                 self.transfer_knowledge_combine(*pair)
                 self.knowledge_destillation(*pair)
-        
+
     def transfer_knowledge_replace(self, source: Agent, target: Agent):
         source_replay_buffer = next(iter(source.replay_buffers.values()))
         target_replay_buffer = next(iter(target.replay_buffers.values()))
         target_replay_buffer.set_state(*source_replay_buffer.get_state())
-    
+
     def transfer_knowledge_combine(self, source: Agent, target: Agent):
         source_replay_buffer = next(iter(source.replay_buffers.values()))
         target_replay_buffer = next(iter(target.replay_buffers.values()))
         source_state = source_replay_buffer.get_state()
         target_state = target_replay_buffer.get_state()
-        combined_state = [target_state[i] + source_state[i] for i in range(len(source_state))]
+        combined_state = [target_state[i] + source_state[i]
+                          for i in range(len(source_state))]
         target_replay_buffer.set_state(*combined_state)
-    
+
     def knowledge_retrain(self, agent: Agent):
         for _ in range(args.n_retrain):
             if args.retrain_cat:
@@ -104,13 +116,16 @@ class MasterBaselineRunner:
                 target_output = target.model(observations)[0]
                 F.cross_entropy(target_output, source_output).backward()
                 target.model.actor_optimizer.step()
+
     def run(self, episodes):
         """ runs the simulation """
         rewards = []
         logs = []
         self.reset()
+
         # wandb.init(project="mrubis_test", entity="mrubis",
         #           mode="online")
+        performance = np.empty((0, len(self.columns)))
         while self.episode < episodes:
             terminated = False
             observations = self.env.reset()
@@ -134,18 +149,23 @@ class MasterBaselineRunner:
                 # Transfer knowledge between partners
                 self.transfer_knowledge_pairwise(pairs)
             while not terminated:
-                actions, regret, root_cause, probabilities = self.mac.select_actions(observations)
+                actions, regret, root_cause, probabilities = self.mac.select_actions(
+                    observations)
                 print("Actions:")
                 print(actions)
-                reward, observations_, terminated, env_info = self.env.step(actions)
+                reward, observations_, terminated, env_info = self.env.step(
+                    actions)
                 if actions is not None:
                     rewards.append(reward)
-                    #print("reward:", reward)
-                    self.mac.add_to_replay_buffer(observations, probabilities , actions, reward, observations_, terminated)
+                    # print("reward:", reward)
+                    self.mac.add_to_replay_buffer(
+                        observations, probabilities, actions, reward, observations_, terminated)
                     if args.on_policy:
-                        self.mac.learn_on_policy(observations, actions, reward, observations_, terminated)
+                        self.mac.learn_on_policy(
+                            observations, actions, reward, observations_, terminated)
                     elif args.on_off_policy:
-                        self.mac.learn_on_off_policy(observations, actions, reward, observations_, terminated, args.batch_size)
+                        self.mac.learn_on_off_policy(
+                            observations, actions, reward, observations_, terminated, args.batch_size)
                     else:
                         self.mac.learn_off_policy(args.batch_size)
                     for shop in regret[0].keys():
@@ -158,12 +178,28 @@ class MasterBaselineRunner:
                 self.step += 1
 
                 if terminated:
+                    result = [None] * 11
+                    result[0] = self.episode+1
                     for shop, count in env_info['stats'].items():
                         print(f"Fixed_{shop}: {count}")
+                        result[int(shop.replace('mRUBiS #', ''))] = count
                         if count != -1:
                             wandb.log({f"Fixed_{shop}": count},
                                       step=self.step)
+                    performance = np.append(performance, np.array(
+                        [np.concatenate([result, self.options])]), axis=0)
             if args.use_exploration:
                 self.mac.reset_sampled_actions_mem()
             self.episode += 1
             print(f"episode {self.episode} done")
+        try:
+            former_data = np.genfromtxt(
+                f"performance_{os.getenv('MRUBIS_PORT')}.csv", delimiter=',', dtype="U", skip_header=1)
+        except:
+            open(f"performance_{os.getenv('MRUBIS_PORT')}.csv", 'w').close()
+            former_data = []
+        header = ", ".join(self.columns)
+        if (len(former_data) > 0):
+            performance = np.append(former_data, performance, axis=0)
+        np.savetxt(f"performance_{os.getenv('MRUBIS_PORT')}.csv", performance,
+                   delimiter=",", fmt="%s", header=header, comments='')

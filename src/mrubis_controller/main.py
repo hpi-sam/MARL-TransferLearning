@@ -9,6 +9,7 @@ from marl.shop_agent_controller import NewActorCritic
 
 from marl.options import args
 
+
 class MrubisStarter:
     def __init__(self):
         pass
@@ -20,7 +21,8 @@ class MrubisStarter:
 
     def __exit__(self, exc_type, exc_value, traceback):
         print("Closing mRUBiS")
-        os.system(f"tmux kill-session -t mrubis{int(os.getenv('MRUBIS_PORT', 8080))}")
+        os.system(
+            f"tmux kill-session -t mrubis{int(os.getenv('MRUBIS_PORT', 8080))}")
 
 
 def main():
