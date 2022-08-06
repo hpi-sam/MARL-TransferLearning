@@ -358,15 +358,6 @@ public class RuleSelector {
 		} catch (JsonProcessingException e) {
 			e.printStackTrace();
 		}
-		try {
-			Files.copy(Paths.get("globalState.json"), Paths.get("globalState_old.json"), StandardCopyOption.REPLACE_EXISTING);
-			ObjectMapper globalStateMapper = new ObjectMapper();
-			globalStateMapper.writeValue(Paths.get("globalState.json").toFile(), globalState);
-		} catch (IOException e) {
-			System.out.println("Failed to write JSON to file:");
-			System.out.println(globalState);
-			e.printStackTrace();
-		}
 	}
 	
 	
@@ -407,17 +398,7 @@ public class RuleSelector {
 		// Get the rules to execute from the python side
 		System.out.println("Waiting for rules from Python side...");
 		HashMap<String, HashMap<String, HashMap<String, String>>> rulesToExecute = ChunkedSocketCommunicator.readJSON(new HashMap<String, HashMap<String, HashMap<String, String>>>());
-		try {
-			ObjectMapper fromPythonMapper = new ObjectMapper();
-			fromPythonMapper.writeValue(rulesToExecutePath.toFile(), rulesToExecute);
-		} catch (IOException e) {
-			System.out.println("Failed to write JSON to file:");
-			System.out.println(rulesToExecute);
-			e.printStackTrace();
-		}
-		
 		ChunkedSocketCommunicator.println("rule_received");
-		
 		System.out.println("Rule received: " + rulesToExecute);
 		
 	}
