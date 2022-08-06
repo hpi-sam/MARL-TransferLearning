@@ -133,10 +133,6 @@ public class Task_1 {
 		// A_CF_Performance .....Saturating
 		// A_CF_ALL ..... ALL + ALL without Random
 
-
-		
-
-
 		Activity A_CF1 = EnvSetUp.getStoryDiagramActivityFromFile("model/analysis/A_CF1_ALL.mlsdm");
 		Activity A_CF2 = EnvSetUp.getStoryDiagramActivityFromFile("model/analysis/A_CF2_ALL.mlsdm");
 		Activity A_CF3 = EnvSetUp.getStoryDiagramActivityFromFile("model/analysis/A_CF3_ALL.mlsdm");
@@ -265,8 +261,8 @@ public class Task_1 {
 					Collections.shuffle(comps, random);
 					cg1 = comps.subList(0, comps.size() / 2);
 					cg2 = comps.subList((comps.size() / 2), comps.size());
-					cg1 = comps.subList(0, 2);
-					cg2 = comps.subList(2, 4);
+					cg1 = comps.subList(0, 6);
+					cg2 = comps.subList(6, 12);
 					List<Integer> shopIDs = IntStream.range(0, architecture.getTenants().size()).boxed().collect(Collectors.toList());
 					// Collections.shuffle(shopIDs, random);
 					sg1 = shopIDs.subList(0, shopIDs.size() / 2);
