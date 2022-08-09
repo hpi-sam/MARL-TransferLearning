@@ -13,17 +13,21 @@ class ChunkedSocketCommunicator(object):
         self.port = port
         self.socket = None
 
-        logging.basicConfig()
         self.logger = logging.getLogger('controller')
-        self.logger.setLevel(logging.INFO)
 
         self._start_mrubis()
 
     def _start_mrubis(self):
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sleep(1)
-        self.socket.connect((self.host, self.port))
-        self.logger.info('Connected to the Java side.')
+        for retry_num in range(10):
+            try:
+                self.socket.connect((self.host, self.port))
+                break
+            except ConnectionRefusedError:
+                self.logger.warning("Connection try %d failed", retry_num)
+                sleep(20)
+        self.logger.info('Connected to the Java side on port %d.', self.port)
 
     def get_from_mrubis(self, message):
         '''Send a message to mRUBiS and return the response as a dictionary'''

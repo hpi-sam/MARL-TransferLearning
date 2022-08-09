@@ -10,9 +10,7 @@ from marl.master_project.mrubis_data_helper import get_current_utility
 
 from numpy.random import normal
 
-logging.basicConfig()
 logger = logging.getLogger('controller')
-logger.setLevel(logging.INFO)
 
 
 class MrubisEnv(gym.Env):

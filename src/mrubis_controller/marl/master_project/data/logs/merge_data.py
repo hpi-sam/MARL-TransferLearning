@@ -1,4 +1,5 @@
 from cmath import nan
+import logging
 import os
 import matplotlib.pyplot as plt
 import numpy as np
@@ -102,7 +103,7 @@ def build_fitted_regret(data, episodes):
             new_data[label] = sigmoid(x, *popt)
             parameters[label] = popt
         except RuntimeError as error:
-            print(f'Label {label} does not converge: {error} Trying exponential.')
+            logging.info(f'Label {label} does not converge: {error} Trying exponential.')
             popt, pcov = curve_fit(func_c, x, d)
             new_data[label] = func_c(x, *popt)
             parameters[label] = popt

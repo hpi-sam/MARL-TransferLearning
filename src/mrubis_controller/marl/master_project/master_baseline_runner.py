@@ -1,3 +1,4 @@
+import logging
 import math
 import os
 from typing import List, Tuple
@@ -63,16 +64,16 @@ class MasterBaselineRunner:
         self.env.close()
 
     def get_groups(self, agents: List[Agent]) -> Tuple[List[Agent]]:
-        print("agents", agents)
+        logging.debug("agents %s", agents)
         sorted_agents = sorted(agents, key=lambda agent: list(agent.shops)[0])
-        print("sorted_agents", sorted_agents)
+        logging.debug("sorted_agents %s", sorted_agents)
         return sorted_agents[:int(len(agents) / 2)], sorted_agents[int(len(agents) / 2):]
 
     def transfer_knowledge_pairwise(self, pairs: List[Tuple[Agent]]):
         if args.transfer_strategy == "off":
             return
         for pair in pairs:
-            print("======== TRANSFERING KNOWLEDGE =========")
+            logging.info("======== TRANSFERING KNOWLEDGE =========")
             if args.transfer_strategy == "replace":
                 self.transfer_knowledge_replace(*pair)
                 self.knowledge_retrain(pair[1])
@@ -130,8 +131,9 @@ class MasterBaselineRunner:
             terminated = False
             observations = self.env.reset()
             logs.append([])
-            wandb.log({'episode': self.episode},
-                      commit=False, step=self.step)
+            if args.wandb:
+                wandb.log({'episode': self.episode},
+                        commit=False, step=self.step)
             all_replay_buffers = {}
             # for agent in self.mac.agents:
             #     all_replay_buffers = {**all_replay_buffers, **agent.replay_buffers}
@@ -141,18 +143,18 @@ class MasterBaselineRunner:
             # wandb.log({f'Replay Buffer Distances': px.imshow((distances / math.sqrt(18**2)).numpy(), text_auto=True, x=buffer_names, y=buffer_names)}, step=self.step)
             if self.episode == math.ceil(episodes / 2):
                 group1, group2 = self.get_groups(self.mac.agents)
-                print("group1: ", group1)
-                print("group2: ", group2)
+                logging.debug("group1: %s", group1)
+                logging.debug("group2: %s", group2)
                 # For every element in group1 find partner in group2
                 pairs = zip(group1, group2)
-                print("pairs: ", pairs)
+                logging.debug("pairs: %s", pairs)
                 # Transfer knowledge between partners
                 self.transfer_knowledge_pairwise(pairs)
             while not terminated:
                 actions, regret, root_cause, probabilities = self.mac.select_actions(
                     observations)
-                print("Actions:")
-                print(actions)
+                logging.debug("Actions:")
+                logging.debug(actions)
                 reward, observations_, terminated, env_info = self.env.step(
                     actions)
                 if actions is not None:
@@ -169,11 +171,13 @@ class MasterBaselineRunner:
                     else:
                         self.mac.learn_off_policy(args.batch_size)
                     for shop in regret[0].keys():
-                        wandb.log(
-                            {f'Regret_{shop}': regret[0][shop]}, step=self.step)
+                        if args.wandb and False:
+                            wandb.log(
+                                {f'Regret_{shop}': regret[0][shop]}, step=self.step, commit=False)
                     for shop in reward:
-                        wandb.log(
-                            {f"Reward_{shop}": reward[shop]}, step=self.step)
+                        if args.wandb and False:
+                            wandb.log(
+                                {f"Reward_{shop}": reward[shop]}, step=self.step, commit=False)
                 observations = observations_
                 self.step += 1
 
@@ -181,17 +185,18 @@ class MasterBaselineRunner:
                     result = [None] * 11
                     result[0] = self.episode+1
                     for shop, count in env_info['stats'].items():
-                        print(f"Fixed_{shop}: {count}")
+                        logging.debug(f"Fixed_{shop}: {count}")
                         result[int(shop.replace('mRUBiS #', ''))] = count
                         if count != -1:
-                            wandb.log({f"Fixed_{shop}": count},
-                                      step=self.step)
+                            if args.wandb:
+                                wandb.log({f"Fixed_{shop}": count},
+                                        step=self.step, commit=False)
                     performance = np.append(performance, np.array(
                         [np.concatenate([result, self.options])]), axis=0)
             if args.use_exploration:
                 self.mac.reset_sampled_actions_mem()
             self.episode += 1
-            print(f"episode {self.episode} done")
+            logging.info(f"episode {self.episode} done")
         try:
             former_data = np.genfromtxt(
                 f"performance_{os.getenv('MRUBIS_PORT')}.csv", delimiter=',', dtype="U", skip_header=1)

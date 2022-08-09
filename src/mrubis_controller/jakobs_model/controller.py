@@ -15,7 +15,6 @@ import numpy as np
 
 from marl.chunkedsocketcommunicator import ChunkedSocketCommunicator
 
-logging.basicConfig()
 logger = logging.getLogger('controller')
 logger.setLevel(logging.INFO)
 
@@ -71,10 +70,10 @@ class MRubisController():
         '''Query mRUBiS for the number of shops, get their initial states'''
         self.number_of_shops = self.communicator.get_from_mrubis(
             'get_number_of_shops').get('number_of_shops')
-        logger.info(f'Number of mRUBIS shops: {self.number_of_shops}')
+        logger.debug(f'Number of mRUBIS shops: {self.number_of_shops}')
         for _ in range(self.number_of_shops):
             shop_state = self.communicator.get_from_mrubis('get_initial_state')
-            logger.info(f'Initial State: {shop_state}')
+            logger.debug(f'Initial State: {shop_state}')
             shop_name = next(iter(shop_state))
             self.mrubis_state[shop_name] = shop_state[shop_name]
 
@@ -121,9 +120,9 @@ class MRubisController():
         shop_name, component_name, _, issue_name, _, _ = self._get_info_from_issue(
             issue)
         picked_rule_message = {shop_name: {issue_name: {component_name: rule}}}
-        logger.info(
+        logger.debug(
             f"{shop_name}: Handling {issue_name} on {component_name} with {rule}")
-        logger.info(f"Sending selected rule to mRUBIS: {picked_rule_message}")
+        logger.debug(f"Sending selected rule to mRUBIS: {picked_rule_message}")
         self.communicator.println(json.dumps(picked_rule_message))
         logger.debug("Waiting for mRUBIS to answer with 'rule_received'...")
         data = self.communicator.readln()
@@ -148,7 +147,7 @@ class MRubisController():
                     failing_component_types = [values[1] for component_info in self.components_fixed_in_this_run.values() for values in component_info]
                     type_of_component_to_fix = fixed_components[0][1]
                     fail_probability_message = {'type_of_component_to_fix': [type_of_component_to_fix], 'failing_component_types': failing_component_types}
-                    logger.info(json.dumps(fail_probability_message))
+                    logger.debug(json.dumps(fail_probability_message))
                     self.communicator.println(json.dumps(fail_probability_message))
                     data = self.communicator.readln()
                     try:
@@ -223,7 +222,7 @@ class MRubisController():
             data = self.socket.recv(64000)
         '''
         self.communicator.println(json.dumps(order_dict))
-        logger.info(f"send order_dict: {order_dict}")
+        logger.debug(f"send order_dict: {order_dict}")
         logger.debug(
             "Waiting for mRUBIS to answer with 'fix_order_received'...")
         data = self.communicator.readln()
@@ -263,7 +262,7 @@ class MRubisController():
         history_df.columns = ['run', 'fix_status', 'shop',
                               'component'] + list(history_df.columns)[4:]
         self.output_path.mkdir(exist_ok=True)
-        logger.info('Writing run history to disk...')
+        logger.debug('Writing run history to disk...')
         history_df.to_csv(self.output_path / f'{filename}.csv', index=False)
         #history_df.to_excel(self.output_path / f'{filename}.xls', index=False)
 
@@ -323,7 +322,7 @@ class MRubisController():
             self.number_of_issues_in_run = 1  # make sure that the loop runs at least once
             #current_issues = []
 
-            logger.info(f"Getting state {self.run_counter}/{max_runs}...")
+            logger.debug(f"Getting state {self.run_counter}/{max_runs}...")
 
             if self.run_counter == 1:
                 self._get_initial_state()
@@ -335,7 +334,7 @@ class MRubisController():
 
                 # Get the current issue to handle
                 current_issue = self.communicator.get_from_mrubis('get_issue')
-                logger.info(
+                logger.debugs(
                     f'get current issue: {current_issue}')
                 #current_issues.append(current_issue)
                 self._update_current_state(current_issue)
@@ -347,9 +346,9 @@ class MRubisController():
 
                 self.number_of_issues_handled_in_this_run += 1
 
-            logger.info(
+            logger.debug(
                 f'Total number of issues to handle in current run: {self.number_of_issues_in_run}')
-            logger.info(
+            logger.debug(
                 f'Total number of issues handled: {self.number_of_issues_handled_in_this_run}')
 
             # Predict the optimal utility of the components to fix...
@@ -364,13 +363,13 @@ class MRubisController():
             fixed_issues = self._cumulative_utility_based_on_order(self.current_fixes)
             self.fix_history.append(fixed_issues)
 
-            logger.info(f'Fixing in this order: {component_fixing_order}')
+            logger.debug(f'Fixing in this order: {component_fixing_order}')
             self._send_order_in_which_to_apply_fixes(component_fixing_order)
 
             # Fixes are now being applied...
 
             # Query the state of the affected components once more
-            logger.info(
+            logger.debug(
                 "Getting state of affected components after taking action...")
             state_after_action = self.communicator.get_from_mrubis(
                 message=json.dumps(
@@ -378,7 +377,7 @@ class MRubisController():
                         for shop_name, i_c_tuples in self.components_fixed_in_this_run.items()}
                 )
             )
-            logger.info(f"State after action: {state_after_action}")
+            logger.debug(f"State after action: {state_after_action}")
 
             self._update_current_state(state_after_action)
             self._remove_replaced_authentication_service()
