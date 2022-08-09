@@ -1,3 +1,4 @@
+import gzip
 import logging
 import math
 import os
@@ -159,14 +160,14 @@ class MasterBaselineRunner:
                             [np.concatenate([np.zeros(10)+500, self.options])]), axis=0)
                     try:
                         former_data = np.genfromtxt(
-                            f"performance_{os.getenv('MRUBIS_PORT')}.csv", delimiter=',', dtype="U", skip_header=1)
+                            f"performance_{os.getenv('MRUBIS_PORT')}.csv.gz", delimiter=',', dtype="U", skip_header=1)
                     except:
-                        open(f"performance_{os.getenv('MRUBIS_PORT')}.csv", 'w').close()
+                        open(f"performance_{os.getenv('MRUBIS_PORT')}.csv.gz", 'w').close()
                         former_data = []
                     header = ", ".join(self.columns)
                     if (len(former_data) > 0):
                         performance = np.append(former_data, performance, axis=0)
-                    np.savetxt(f"performance_{os.getenv('MRUBIS_PORT')}.csv", performance,
+                    np.savetxt(f"performance_{os.getenv('MRUBIS_PORT')}.csv.gz", performance,
                             delimiter=",", fmt="%s", header=header, comments='')
                     exit()
                 actions, regret, root_cause, probabilities = self.mac.select_actions(
@@ -217,12 +218,12 @@ class MasterBaselineRunner:
             logging.info(f"episode {self.episode} done")
         try:
             former_data = np.genfromtxt(
-                f"performance_{os.getenv('MRUBIS_PORT')}.csv", delimiter=',', dtype="U", skip_header=1)
+                f"performance_{os.getenv('MRUBIS_PORT')}.csv.gz", delimiter=',', dtype="U", skip_header=1)
         except:
-            open(f"performance_{os.getenv('MRUBIS_PORT')}.csv", 'w').close()
+            open(f"performance_{os.getenv('MRUBIS_PORT')}.csv.gz", 'w').close()
             former_data = []
         header = ", ".join(self.columns)
         if (len(former_data) > 0):
             performance = np.append(former_data, performance, axis=0)
-        np.savetxt(f"performance_{os.getenv('MRUBIS_PORT')}.csv", performance,
+        np.savetxt(f"performance_{os.getenv('MRUBIS_PORT')}.csv.gz", performance,
                    delimiter=",", fmt="%s", header=header, comments='')
