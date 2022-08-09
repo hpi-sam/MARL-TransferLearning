@@ -153,6 +153,7 @@ class MasterBaselineRunner:
             attempts = 0
             while not terminated:
                 if attempts > 500:
+                    logging.warning("Run exceeded 500 attempts. Aborting.")
                     while len(performance) != 200:
                         performance = np.append(performance, np.array(
                             [np.concatenate([np.zeros(10)+500, self.options])]), axis=0)
