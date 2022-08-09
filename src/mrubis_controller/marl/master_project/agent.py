@@ -393,7 +393,7 @@ class Agent:
             actor_off_loss = F.cross_entropy(y_pred_batch_pos, correct_actions)
         else:
             actor_off_loss = torch.mean(-torch.log(p_old_new) * batch_rewards)
-        return actor_on_loss + args.off_policy_factor * actor_off_loss
+        return (1-args.off_policy_factor) * actor_on_loss + args.off_policy_factor * actor_off_loss
 
     def learn_on_off_policy(self, states, selected_action, reward, states_, dones, batch_size: int = 1):
         """ network learns to improve """
