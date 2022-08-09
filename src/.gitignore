@@ -10,6 +10,7 @@ bin/
 tabularplots/
 gym-results/
 eval/performance.csv
+eval/data.csv
 
 ### Linux ###
 *~
