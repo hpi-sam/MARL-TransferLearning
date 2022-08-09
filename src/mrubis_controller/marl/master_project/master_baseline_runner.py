@@ -150,7 +150,24 @@ class MasterBaselineRunner:
                 logging.debug("pairs: %s", pairs)
                 # Transfer knowledge between partners
                 self.transfer_knowledge_pairwise(pairs)
+            attempts = 0
             while not terminated:
+                if attempts > 500:
+                    while len(performance) != 200:
+                        performance = np.append(performance, np.array(
+                            [np.concatenate([np.zeros(10)+500, self.options])]), axis=0)
+                    try:
+                        former_data = np.genfromtxt(
+                            f"performance_{os.getenv('MRUBIS_PORT')}.csv", delimiter=',', dtype="U", skip_header=1)
+                    except:
+                        open(f"performance_{os.getenv('MRUBIS_PORT')}.csv", 'w').close()
+                        former_data = []
+                    header = ", ".join(self.columns)
+                    if (len(former_data) > 0):
+                        performance = np.append(former_data, performance, axis=0)
+                    np.savetxt(f"performance_{os.getenv('MRUBIS_PORT')}.csv", performance,
+                            delimiter=",", fmt="%s", header=header, comments='')
+                    exit()
                 actions, regret, root_cause, probabilities = self.mac.select_actions(
                     observations)
                 logging.debug("Actions:")

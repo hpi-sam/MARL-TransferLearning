@@ -9,6 +9,7 @@ bin/
 *.pb
 tabularplots/
 gym-results/
+eval/performance.csv
 
 ### Linux ###
 *~
