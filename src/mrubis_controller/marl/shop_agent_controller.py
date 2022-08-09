@@ -14,6 +14,7 @@ from marl.agent.critic import EmbeddingCritic, LinearCritic, WeightedEmbeddingCr
 from marl.mrubis_data_helper import has_shop_remaining_issues
 from marl.replay_buffer import ReplayBuffer
 from marl.options import args
+import logging
 
 import torch.nn.functional as F
 
@@ -108,7 +109,7 @@ class ShopAgentController:
 
     def learn_from_replaybuffer(self, batch_size: int = 1):
         for shop in self.shops:
-            print(shop)
+            logging.debug(shop)
             if not self.visited_shop[self.shops.index(shop)]:
                 continue
             observation, action, selected_action, reward, next_observation = self.replay_buffers[shop].get_batch(batch_size, random=not args.disable_random_batch, balanced=args.balanced_sampling, positive=args.positive_sampling)
@@ -162,10 +163,11 @@ class ShopAgentController:
             #actor_loss: torch.Tensor = (critic(observation, one_hot_sampled_actions) - self.alpha_rb * torch.log(probability_of_selected_actions)).sum().divide(batch_size)
             actor_loss.backward()
             actor_optimizer.step()
-            wandb.log({
-                f"{shop} critic_loss": critic_loss.item(),
-                f"{shop} actor_loss": actor_loss.item()
-            })
+            if args.wandb and False:
+                wandb.log({
+                    f"{shop} critic_loss": critic_loss.item(),
+                    f"{shop} actor_loss": actor_loss.item()
+                }, commit=False)
     
     # def learn_from_replaybuffer(self, batch_size: int = 1):
     #     for shop in self.shops:

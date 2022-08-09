@@ -1,5 +1,6 @@
 # follows https://dev.to/jemaloqiu/reinforcement-learning-with-tf2-and-gym-actor-critic-3go5
 from typing import Dict
+import logging
 import numpy
 import numpy as np
 import torch
@@ -144,7 +145,7 @@ class Agent:
                 actions.append(step)
                 regrets[shop_name] = regret
                 root_causes[shop_name] = root_cause_name
-        print(action_probabilities)
+        logging.debug(action_probabilities)
         return actions, regrets, root_causes, action_probabilities
 
     def choose_from_memory(self, state, shop_name, components):

@@ -1,4 +1,5 @@
 import itertools
+import logging
 import random
 import time
 
@@ -46,7 +47,7 @@ def run_single_estimator(alg, env, num_states, num_actions, episodes=1000,
 
     # init Q-table
     Q = np.zeros((num_states, num_actions), dtype='float32')
-    print(f'Run {alg} with {num_states} states and {num_actions} actions.')
+    logging.info(f'Run {alg} with {num_states} states and {num_actions} actions.')
 
     # calculate explore rate decay to hit the min_explore_rate at the last run.
     explore_rate_decay = (np.log(max_explore_rate - min_explore_rate) - np.log(min_explore_rate)) / episodes

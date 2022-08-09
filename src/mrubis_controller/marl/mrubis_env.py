@@ -12,7 +12,6 @@ from marl.mrubis_data_helper import get_current_utility, has_system_remaining_is
 
 from numpy.random import normal
 
-logging.basicConfig()
 logger = logging.getLogger('controller')
 logger.setLevel(logging.INFO)
 
